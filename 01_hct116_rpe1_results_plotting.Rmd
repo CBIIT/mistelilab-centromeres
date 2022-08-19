@@ -1,0 +1,114 @@
+---
+title: "CENPC Screen - Joint HCT116/TERT-RPE1 - sgRNA Epigenetics Plus - downstream_Analysis"
+author: "Krishnendu Guin/ Adib Keikhosravi / Gianluca Pegoraro"
+date: "August 20th 2022"
+output: html_document
+---
+
+```{r}
+library(tidyverse)
+library(ggthemes)
+library(ggrepel)
+library(fs)
+```
+
+```{r, include=FALSE, warning=FALSE}
+knitr::opts_chunk$set(
+  fig.path = 'knitr_output/',
+  cache = FALSE,
+  dev = c("png"),
+  message = FALSE,
+  warning = FALSE
+)
+
+theme_set(theme_bw())
+theme_update(
+  axis.text.x = element_text(
+    angle = -90,
+    hjust = 0,
+    vjust = 0.5
+  ),
+  axis.text.y = element_text(hjust = 0)
+)
+```
+
+```{r}
+read_final_results <- function(path, glob) {
+  dir_ls(path = path,
+         recurse = T,
+         glob = glob) %>%
+    map_df(read_csv)
+}
+
+glob_path <- "*_all_genes.csv"
+
+all_tbl <- read_final_results("input", glob_path)
+
+glimpse(all_tbl)
+```
+
+```{r}
+all_tbl_wide <- all_tbl %>% 
+  pivot_wider(names_from = cell_line,
+              values_from = score_area_mean:sd_spots_number_mean)
+
+glimpse(all_tbl_wide)
+```
+
+```{r}
+plot_cell_lines <- function(df, x_variable, y_variable, plot_title = "") {
+  df %>% 
+  ggplot(aes(x = {{x_variable}}, 
+             y = {{y_variable}},
+             color = control)) +
+  geom_point(shape = 21) + 
+  geom_smooth(method = "lm",
+              color = "grey50") +
+  scale_color_few(name = "Treatment") +
+  xlab("z-score HCT116") +
+  ylab("z-score RPE1") +
+  ggtitle(plot_title)
+}
+```
+
+```{r cell-n-hct116-rpe1, echo = F}
+plot_cell_lines(all_tbl_wide,
+                score_cell_n_HCT116,
+                score_cell_n_RPE1,
+                "Cell Number")
+```
+
+```{r area-n-hct116-rpe1, echo = F}
+plot_cell_lines(all_tbl_wide,
+                score_area_mean_HCT116,
+                score_area_mean_RPE1,
+                "Nucleus Area")
+```
+
+```{r nspots-n-hct116-rpe1, echo = F}
+plot_cell_lines(all_tbl_wide, 
+                score_spots_number_mean_HCT116,
+                score_spots_number_mean_RPE1,
+                "CENPC Spots Number")
+```
+
+```{r k-corr-perc-hct116-rpe1, echo = F}
+plot_cell_lines(all_tbl_wide,
+                score_k_corr_perc_mean_HCT116,
+                score_k_corr_perc_mean_RPE1,
+                "Ripley's K Curve Above Poisson"
+)
+```
+
+```{r radial-dist-hct116-rpe1, echo = F}
+plot_cell_lines(all_tbl_wide, 
+                score_radial_dist_mean_mean_HCT116,
+                score_radial_dist_mean_mean_RPE1,
+                "Radial Distance")
+```
+
+Document the information about the analysis session
+
+```{r sessionInfo, results='markup'}
+sessionInfo()
+```
