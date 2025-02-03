@@ -1,25 +1,31 @@
 ---
 title: "CENPC Screen - Joint HCT116/TERT-RPE1 - sgRNA Epigenetics Plus - downstream_Analysis"
 author: "Krishnendu Guin/ Adib Keikhosravi / Gianluca Pegoraro"
-date: "August 20th 2022"
-output: html_document
+date: today
+date-format: long
+format: 
+  html:
+      self-contained: true
+      code-fold: true
+      code-tools: true
+      code-link: true
+editor: source
 ---
 
 ```{r}
+#| label: load-packages
+#| include: false
+#| warning: false
+
 library(tidyverse)
 library(ggthemes)
 library(ggrepel)
 library(fs)
 ```
 
-```{r, include=FALSE, warning=FALSE}
-knitr::opts_chunk$set(
-  fig.path = 'knitr_output/',
-  cache = FALSE,
-  dev = c("png"),
-  message = FALSE,
-  warning = FALSE
-)
+```{r}
+#| label: set-theme
+#| include: false
 
 theme_set(theme_bw())
 theme_update(
@@ -76,7 +82,9 @@ plot_cell_lines <- function(df,
 }
 ```
 
-```{r cell-n-hct116-rpe1-1}
+```{r}
+#| label: cell-n-hct116-rpe1-1
+
 all_tbl_wide %>%
   mutate(marker = ifelse(control == "sample" & score_cell_n_HCT116 > -2.5 & score_cell_n_RPE1 > 2.5,
                          gene_symbol,
@@ -86,7 +94,9 @@ plot_cell_lines(x_variable = score_cell_n_HCT116,
                 plot_title = "Cell Number")
 ```
 
-```{r cell-n-hct116-rpe1-2}
+```{r}
+#| label: cell-n-hct116-rpe1-2
+
 all_tbl_wide %>%
   mutate(marker = ifelse(control == "sample" & score_cell_n_HCT116 > 2 & score_cell_n_RPE1 < 2,
                          gene_symbol,
@@ -96,7 +106,9 @@ plot_cell_lines(x_variable = score_cell_n_HCT116,
                 plot_title = "Cell Number")
 ```
 
-```{r cell-n-hct116-rpe1-3}
+```{r}
+#| label: cell-n-hct116-rpe1-3
+
 all_tbl_wide %>%
   mutate(marker = ifelse(control == "sample" & score_cell_n_HCT116 < -2.5 & score_cell_n_RPE1 > 0,
                          gene_symbol,
@@ -106,7 +118,9 @@ plot_cell_lines(x_variable = score_cell_n_HCT116,
                 plot_title = "Cell Number")
 ```
 
-```{r cell-n-hct116-rpe1-4}
+```{r}
+#| label: cell-n-hct116-rpe1-4
+
 all_tbl_wide %>%
   mutate(marker = ifelse(control == "sample" & score_cell_n_HCT116 < -2.5 & score_cell_n_RPE1 < -2.5,
                          gene_symbol,
@@ -116,7 +130,9 @@ plot_cell_lines(x_variable = score_cell_n_HCT116,
                 plot_title = "Cell Number")
 ```
 
-```{r area-hct116-rpe1-1}
+```{r}
+#| label: area-hct116-rpe1-1
+
 all_tbl_wide %>%
   mutate(marker = ifelse(control == "sample" & score_area_mean_HCT116 >  2.5 & score_area_mean_RPE1 > 2.5,
                          gene_symbol,
@@ -126,7 +142,9 @@ plot_cell_lines(x_variable = score_area_mean_HCT116,
                 plot_title = "Nucleus Area")
 ```
 
-```{r area-hct116-rpe1-2}
+```{r}
+#| label: area-hct116-rpe1-2
+
 all_tbl_wide %>%
   mutate(marker = ifelse(control == "sample" & score_area_mean_HCT116 <  3 & score_area_mean_RPE1 > 3,
                          gene_symbol,
@@ -136,7 +154,9 @@ plot_cell_lines(x_variable = score_area_mean_HCT116,
                 plot_title = "Nucleus Area")
 ```
 
-```{r area-hct116-rpe1-3}
+```{r}
+#| label: area-hct116-rpe1-3
+
 all_tbl_wide %>%
   mutate(marker = ifelse(control == "sample" & score_area_mean_HCT116 <  5 & score_area_mean_RPE1 < -2.5,
                          gene_symbol,
@@ -146,7 +166,9 @@ plot_cell_lines(x_variable = score_area_mean_HCT116,
                 plot_title = "Nucleus Area")
 ```
 
-```{r spots-n-hct116-rpe1-1}
+```{r}
+#| label: spots-n-hct116-rpe1-1
+
 all_tbl_wide %>%
   mutate(marker = ifelse(control == "sample" & score_spots_number_mean_HCT116 < -5 & score_spots_number_mean_RPE1 < -5 
                          ,
@@ -157,7 +179,9 @@ plot_cell_lines(x_variable = score_spots_number_mean_HCT116,
                 plot_title = "Number of CENPC Spots")
 ```
 
-```{r spots-n-hct116-rpe1-2}
+```{r}
+#| label: spots-n-hct116-rpe1-2
+
 all_tbl_wide %>%
   mutate(marker = ifelse(control == "sample" & score_spots_number_mean_HCT116 > 2.5 & score_spots_number_mean_RPE1 > -10,
                          gene_symbol,
@@ -167,7 +191,9 @@ plot_cell_lines(x_variable = score_spots_number_mean_HCT116,
                 plot_title = "Number of CENPC Spots")
 ```
 
-```{r k-corr-perc--hct116-rpe1-1}
+```{r}
+#| label: k-corr-perc--hct116-rpe1-1
+
 all_tbl_wide %>%
   mutate(marker = ifelse(control == "sample" & score_k_corr_perc_mean_HCT116 > 3 & score_k_corr_perc_mean_RPE1 > 3,
                          gene_symbol,
@@ -177,7 +203,8 @@ plot_cell_lines(x_variable = score_k_corr_perc_mean_HCT116,
                 plot_title = "Percentage of K Function above Poisson")
 ```
 
-```{r k-corr-perc--hct116-rpe1-2}
+```{r}
+#| label: k-corr-perc--hct116-rpe1-2
 all_tbl_wide %>%
   mutate(marker = ifelse(control == "sample" & score_k_corr_perc_mean_HCT116 < -3 & score_k_corr_perc_mean_RPE1 < -2.5,
                          gene_symbol,
@@ -189,6 +216,9 @@ plot_cell_lines(x_variable = score_k_corr_perc_mean_HCT116,
 
 Document the information about the analysis session
 
-```{r sessionInfo, results='markup'}
+```{r}
+#| label: session-info
+#| results: markup
+
 sessionInfo()
 ```
