@@ -42,7 +42,7 @@ theme_update(
 read_final_results <- function(path, glob) {
   dir_ls(path = path,
          recurse = T,
-         glob = glob) %>%
+         glob = glob) |>
     map_df(read_csv)
 }
 
@@ -52,7 +52,7 @@ all_tbl <- read_final_results("input", glob_path)
 ```
 
 ```{r}
-all_tbl_wide <- all_tbl %>% 
+all_tbl_wide <- all_tbl |> 
   pivot_wider(names_from = cell_line,
               values_from = score_area_mean:sd_spots_number_mean)
 
@@ -64,7 +64,7 @@ plot_cell_lines <- function(df,
                             x_variable, 
                             y_variable, 
                             plot_title = ""){
-  df %>%
+  df |>
   ggplot(aes(x = {{x_variable}}, 
              y = {{y_variable}},
              color = control,
@@ -85,10 +85,10 @@ plot_cell_lines <- function(df,
 ```{r}
 #| label: cell-n-hct116-rpe1-1
 
-all_tbl_wide %>%
+all_tbl_wide |>
   mutate(marker = ifelse(control == "sample" & score_cell_n_HCT116 > -2.5 & score_cell_n_RPE1 > 2.5,
                          gene_symbol,
-                         "")) %>%
+                         "")) |>
 plot_cell_lines(x_variable = score_cell_n_HCT116,
                 y_variable = score_cell_n_RPE1,
                 plot_title = "Cell Number")
@@ -97,10 +97,10 @@ plot_cell_lines(x_variable = score_cell_n_HCT116,
 ```{r}
 #| label: cell-n-hct116-rpe1-2
 
-all_tbl_wide %>%
+all_tbl_wide |>
   mutate(marker = ifelse(control == "sample" & score_cell_n_HCT116 > 2 & score_cell_n_RPE1 < 2,
                          gene_symbol,
-                         "")) %>%
+                         "")) |>
 plot_cell_lines(x_variable = score_cell_n_HCT116,
                 y_variable = score_cell_n_RPE1,
                 plot_title = "Cell Number")
@@ -109,10 +109,10 @@ plot_cell_lines(x_variable = score_cell_n_HCT116,
 ```{r}
 #| label: cell-n-hct116-rpe1-3
 
-all_tbl_wide %>%
+all_tbl_wide |>
   mutate(marker = ifelse(control == "sample" & score_cell_n_HCT116 < -2.5 & score_cell_n_RPE1 > 0,
                          gene_symbol,
-                         "")) %>%
+                         "")) |>
 plot_cell_lines(x_variable = score_cell_n_HCT116,
                 y_variable = score_cell_n_RPE1,
                 plot_title = "Cell Number")
@@ -121,10 +121,10 @@ plot_cell_lines(x_variable = score_cell_n_HCT116,
 ```{r}
 #| label: cell-n-hct116-rpe1-4
 
-all_tbl_wide %>%
+all_tbl_wide |>
   mutate(marker = ifelse(control == "sample" & score_cell_n_HCT116 < -2.5 & score_cell_n_RPE1 < -2.5,
                          gene_symbol,
-                         "")) %>%
+                         "")) |>
 plot_cell_lines(x_variable = score_cell_n_HCT116,
                 y_variable = score_cell_n_RPE1,
                 plot_title = "Cell Number")
@@ -133,10 +133,10 @@ plot_cell_lines(x_variable = score_cell_n_HCT116,
 ```{r}
 #| label: area-hct116-rpe1-1
 
-all_tbl_wide %>%
+all_tbl_wide |>
   mutate(marker = ifelse(control == "sample" & score_area_mean_HCT116 >  2.5 & score_area_mean_RPE1 > 2.5,
                          gene_symbol,
-                         "")) %>%
+                         "")) |>
 plot_cell_lines(x_variable = score_area_mean_HCT116,
                 y_variable = score_area_mean_RPE1,
                 plot_title = "Nucleus Area")
@@ -145,10 +145,10 @@ plot_cell_lines(x_variable = score_area_mean_HCT116,
 ```{r}
 #| label: area-hct116-rpe1-2
 
-all_tbl_wide %>%
+all_tbl_wide |>
   mutate(marker = ifelse(control == "sample" & score_area_mean_HCT116 <  3 & score_area_mean_RPE1 > 3,
                          gene_symbol,
-                         "")) %>%
+                         "")) |>
 plot_cell_lines(x_variable = score_area_mean_HCT116,
                 y_variable = score_area_mean_RPE1,
                 plot_title = "Nucleus Area")
@@ -157,10 +157,10 @@ plot_cell_lines(x_variable = score_area_mean_HCT116,
 ```{r}
 #| label: area-hct116-rpe1-3
 
-all_tbl_wide %>%
+all_tbl_wide |>
   mutate(marker = ifelse(control == "sample" & score_area_mean_HCT116 <  5 & score_area_mean_RPE1 < -2.5,
                          gene_symbol,
-                         "")) %>%
+                         "")) |>
 plot_cell_lines(x_variable = score_area_mean_HCT116,
                 y_variable = score_area_mean_RPE1,
                 plot_title = "Nucleus Area")
@@ -169,11 +169,11 @@ plot_cell_lines(x_variable = score_area_mean_HCT116,
 ```{r}
 #| label: spots-n-hct116-rpe1-1
 
-all_tbl_wide %>%
+all_tbl_wide |>
   mutate(marker = ifelse(control == "sample" & score_spots_number_mean_HCT116 < -5 & score_spots_number_mean_RPE1 < -5 
                          ,
                          gene_symbol,
-                         "")) %>%
+                         "")) |>
 plot_cell_lines(x_variable = score_spots_number_mean_HCT116,
                 y_variable = score_spots_number_mean_RPE1,
                 plot_title = "Number of CENPC Spots")
@@ -182,10 +182,10 @@ plot_cell_lines(x_variable = score_spots_number_mean_HCT116,
 ```{r}
 #| label: spots-n-hct116-rpe1-2
 
-all_tbl_wide %>%
+all_tbl_wide |>
   mutate(marker = ifelse(control == "sample" & score_spots_number_mean_HCT116 > 2.5 & score_spots_number_mean_RPE1 > -10,
                          gene_symbol,
-                         "")) %>%
+                         "")) |>
 plot_cell_lines(x_variable = score_spots_number_mean_HCT116,
                 y_variable = score_spots_number_mean_RPE1,
                 plot_title = "Number of CENPC Spots")
@@ -194,10 +194,10 @@ plot_cell_lines(x_variable = score_spots_number_mean_HCT116,
 ```{r}
 #| label: k-corr-perc--hct116-rpe1-1
 
-all_tbl_wide %>%
+all_tbl_wide |>
   mutate(marker = ifelse(control == "sample" & score_k_corr_perc_mean_HCT116 > 3 & score_k_corr_perc_mean_RPE1 > 3,
                          gene_symbol,
-                         "")) %>%
+                         "")) |>
 plot_cell_lines(x_variable = score_k_corr_perc_mean_HCT116,
                 y_variable = score_k_corr_perc_mean_RPE1,
                 plot_title = "Percentage of K Function above Poisson")
@@ -205,10 +205,10 @@ plot_cell_lines(x_variable = score_k_corr_perc_mean_HCT116,
 
 ```{r}
 #| label: k-corr-perc--hct116-rpe1-2
-all_tbl_wide %>%
+all_tbl_wide |>
   mutate(marker = ifelse(control == "sample" & score_k_corr_perc_mean_HCT116 < -3 & score_k_corr_perc_mean_RPE1 < -2.5,
                          gene_symbol,
-                         "")) %>%
+                         "")) |>
 plot_cell_lines(x_variable = score_k_corr_perc_mean_HCT116,
                 y_variable = score_k_corr_perc_mean_RPE1,
                 plot_title = "Percentage of K Function above Poisson")
