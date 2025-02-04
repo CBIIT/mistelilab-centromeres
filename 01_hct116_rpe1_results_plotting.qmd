@@ -186,6 +186,19 @@ all_tbl_wide |>
   )
 ```
 
+# Statistics
+
+```{r}
+#| label: statistics
+
+all_tbl_wide |>
+  filter(control == "sample") |>
+  summarise(
+    corr_spots_n = cor(score_spots_number_mean_HCT116, score_spots_number_mean_RPE1, method = "pearson"),
+    corr_k_corr_perc = cor(score_k_corr_perc_mean_HCT116, score_k_corr_perc_mean_RPE1, method = "pearson")
+  )
+```
+
 Document the information about the analysis session
 
 ```{r}
