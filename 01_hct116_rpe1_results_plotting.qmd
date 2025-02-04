@@ -66,6 +66,15 @@ all_tbl_wide <- all_tbl |>
   pivot_wider(
     names_from = cell_line,
     values_from = score_area_mean:sd_spots_number_mean
+  ) |>
+  relocate(
+    c(
+      score_k_corr_perc_mean_HCT116,
+      score_k_corr_perc_mean_RPE1,
+      score_spots_number_mean_HCT116,
+      score_spots_number_mean_RPE1
+    ),
+    .after = gene_symbol
   )
 
 rmarkdown::paged_table(all_tbl_wide)
@@ -77,23 +86,24 @@ Create a list of hits. Positive and negative sgRNA controls are not in the list 
 all_hits_tbl <- all_tbl_wide |>
   filter(control == "sample") |>
   filter(
-     score_area_mean_HCT116 > 2.5 | 
-     score_area_mean_HCT116 < -2.5 |
-     score_area_mean_RPE1 > 2.5 | 
-     score_area_mean_RPE1 < -2.5 |
+     score_k_corr_perc_mean_HCT116 > 2.5 | 
+     score_k_corr_perc_mean_HCT116 < -2.5 |
+     score_k_corr_perc_mean_RPE1 > 2.5 | 
+     score_k_corr_perc_mean_RPE1 < -2.5 |
      score_spots_number_mean_HCT116 > 2.5 | 
      score_spots_number_mean_HCT116 < -2.5 |
      score_spots_number_mean_RPE1 > 2.5 | 
      score_spots_number_mean_RPE1 < -2.5
   ) |>
-  filter(score_cell_n_HCT116 > -2.5 | score_cell_n_RPE1 > -2.5)
+  filter(score_cell_n_HCT116 > -2.5 | score_cell_n_RPE1 > -2.5) |>
+  arrange(desc(score_k_corr_perc_mean_HCT116))
 
 all_hits_tbl |> write_csv("output/all_hits_tbl.csv")
 
 rmarkdown::paged_table(all_hits_tbl)
 ```
 
-Now filter the all_tbl_wide table to include only the hits that are common to both cell lines (i.e. they are a hit in both cell lines).
+Now filter the all_tbl_wide table to include only the hits that are common to both cell lines (i.e. they are a hit in both cell lines). Write the common hits to a csv file.
 
 ```{r}
 common_hits_tbl <- all_hits_tbl |>
@@ -106,7 +116,10 @@ common_hits_tbl <- all_hits_tbl |>
      score_k_corr_perc_mean_HCT116 > 2.5) &
      (score_k_corr_perc_mean_RPE1 < -2.5 | 
      score_k_corr_perc_mean_RPE1 > 2.5))
-  )
+  ) |>
+  arrange(desc(score_k_corr_perc_mean_HCT116))
+
+common_hits_tbl |> write_csv("output/common_hits_tbl.csv")
 
 rmarkdown::paged_table(common_hits_tbl)
 ```
@@ -177,7 +190,7 @@ all_tbl_wide |>
 ```
 
 ```{r}
-#| label: k-corr-perc--hct116-rpe1
+#| label: k-corr-perc-hct116-rpe1
 #| fig.height: 8
 #| fig.width: 12
 
