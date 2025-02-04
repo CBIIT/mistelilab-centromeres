@@ -98,14 +98,14 @@ Now filter the all_tbl_wide table to include only the hits that are common to bo
 ```{r}
 common_hits_tbl <- all_hits_tbl |>
   filter(
-    (score_spots_number_mean_HCT116 < -2.5 | 
-     score_spots_number_mean_HCT116 > 2.5 | 
-     score_k_corr_perc_mean_HCT116 < -2.5 | 
+    ((score_spots_number_mean_HCT116 < -2.5 | 
+     score_spots_number_mean_HCT116 > 2.5) & 
+     (score_spots_number_mean_RPE1 < -2.5 | 
+     score_spots_number_mean_RPE1 > 2.5 )) |
+    ((score_k_corr_perc_mean_HCT116 < -2.5 | 
      score_k_corr_perc_mean_HCT116 > 2.5) &
-    (score_spots_number_mean_RPE1 < -2.5 | 
-     score_spots_number_mean_RPE1 > 2.5 |
-     score_k_corr_perc_mean_RPE1 < -2.5 | 
-     score_k_corr_perc_mean_RPE1 > 2.5)
+     (score_k_corr_perc_mean_RPE1 < -2.5 | 
+     score_k_corr_perc_mean_RPE1 > 2.5))
   )
 
 rmarkdown::paged_table(common_hits_tbl)
@@ -157,7 +157,6 @@ plot_cell_lines <- function(df,
       color = "grey50"
     ) +
     scale_color_few(name = "Treatment") +
-    coord_equal() +
     xlab("Z-score HCT116") +
     ylab("Z-score RPE1") +
     ggtitle(plot_title)
@@ -166,6 +165,8 @@ plot_cell_lines <- function(df,
 
 ```{r}
 #| label: spots-n-hct116-rpe1
+#| fig.height: 8
+#| fig.width: 12
 
 all_tbl_wide |>
   plot_cell_lines(
@@ -177,6 +178,8 @@ all_tbl_wide |>
 
 ```{r}
 #| label: k-corr-perc--hct116-rpe1
+#| fig.height: 8
+#| fig.width: 12
 
 all_tbl_wide |>
   plot_cell_lines(
