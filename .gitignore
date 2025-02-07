@@ -6,3 +6,7 @@
 *.html
 .cursorrules
 *output/
+*hts2_input*
+*hitips_input*
+*reformat_metadata*
+*cache*

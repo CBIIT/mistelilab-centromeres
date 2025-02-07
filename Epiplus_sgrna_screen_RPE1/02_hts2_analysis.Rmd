@@ -1,0 +1,120 @@
+---
+title:  "CENPC Screen - TERT-RPE1 -sgRNA Epigenetics Plus - cellHTS2 analysis"
+author: "Krishnendu Guin/ Adib Keikhosravi/ Gianluca Pegoraro"
+date: "Aug 20th 2022"
+output: "html_document"
+---
+
+## Setup
+
+Load packages.
+
+```{r}
+library(tidyverse)
+library(cellHTS2)
+library(qs)
+```
+
+Set Knitr options.
+
+```{r, include=FALSE, warning=FALSE}
+knitr::opts_chunk$set(
+  message = FALSE,
+  warning = FALSE
+  )
+```
+
+### User variables input and settings specification
+
+The chunk below assigns the Columbus variable chosen for analysis and sets the `cellHTS2` input and output directories names accordingly .
+
+```{r}
+well_tbl <- qread("cache/hitips_well_results.qs") %>% tibble()
+annotation_tbl <- read_tsv("hts2_metadata/Annotation.txt")
+
+var_names <- well_tbl %>% select(cell_n:spots_number_mean) %>% names()
+```
+
+## `cellHTS2` data analysis
+
+```{r importPlateList}
+##`cellHTS2` data analysis function
+
+calculate_HTS2 <- function(meas_select, in_dir = NULL, metadata_dir = NULL, out_dir = NULL){
+  
+  #Read the measurement files in the in_dir directory. 
+  obj <- readPlateList(filename = "Platelist.txt",
+                             name = meas_select,
+                             path = file.path(in_dir, meas_select))
+  
+  #Configure the cellHTS2 object
+  obj <- configure(obj,
+                   descripFile = "Description.txt",
+                   confFile = "Plateconf.txt",
+                   path = metadata_dir)
+  
+  #Normalize the measurements on a per plate-basis.
+  obj_n <- normalizePlates(obj,
+                          scale = "additive",
+                          log = FALSE,
+                          method = "Bscore", #Spatial normalization
+                          varianceAdjust = "byPlate")
+
+  #Score the replicates by taking the Z-score of the B-score distribution 
+  # calculated in the previous chunk.
+  obj_sc <- scoreReplicates(obj_n, 
+                            sign = "+", 
+                            method = "zscore")
+  
+  #Summarize the replicates. In this particular case the final Z-score is going 
+  # to be the mean of the two replicates Z-scores. 
+  obj_sc <-summarizeReplicates(obj_sc, 
+                               summary = "mean")
+  
+  # Annotate the cellHTS2 object with gene names and siRNA id's. 
+  obj_sc <- cellHTS2::annotate(obj_sc,
+                               geneIDFile = "Annotation.txt",
+                               path = metadata_dir)
+
+  #Save the cellHTS2 object as an `.rda` file in the appropriate results 
+  #subfolder in case someone wants to inspect it and/or further process it.
+  save(obj_sc, file = file.path(out_dir, 
+                                meas_select, 
+                                "obj_sc.rda"))
+  
+    
+  setSettings(list(plateList = list(reproducibility = list(include = TRUE, 
+                                                           map = TRUE),
+                                    intensities = list(include = TRUE, map = TRUE)),
+                   screenSummary = list(scores = list(range = c(-8, 8), map = TRUE))))
+  
+  # Write the report in the appropriate output directory
+  cellHTS2_report <- writeReport(raw = obj,
+                                normalized = obj_n,
+                                scored = obj_sc,
+                                outdir = file.path(out_dir, 
+                                                   meas_select),
+                                force = TRUE,
+                                mainScriptFile = "02_hts2_analysis.Rmd")
+  
+  # Write the results table in the appropriate output directory
+  results_tbl <- getTopTable(cellHTSlist = list("raw" = obj,
+                                                "normalized" = obj_n,
+                                                "scored" = obj_sc),
+                             file = file.path(out_dir,
+                                             meas_select,
+                                             "Results_table.txt"))
+}
+```
+
+```{r}
+var_names %>% walk(calculate_HTS2, in_dir = "hts2_input/", 
+                   metadata_dir = "hts2_metadata/", 
+                   out_dir = "hts2_output/")
+```
+
+Document the information about the analysis session
+
+```{r sessionInfo, results='markup'}
+sessionInfo()
+```
