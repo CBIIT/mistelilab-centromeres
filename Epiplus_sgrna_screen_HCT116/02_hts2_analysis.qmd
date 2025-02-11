@@ -115,7 +115,6 @@ calculate_HTS2 <- function(meas_select, in_dir = NULL, metadata_dir = NULL, out_
     "obj_sc.rda"
   ))
 
-
   setSettings(list(
     plateList = list(
       reproducibility = list(
