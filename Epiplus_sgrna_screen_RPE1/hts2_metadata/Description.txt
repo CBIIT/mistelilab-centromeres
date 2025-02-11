@@ -6,8 +6,8 @@ Contact information: krishnendu.guinnih.gov / keikhosravia2@nih.gov/ gianluca.pe
 [Screen description]
 Screen: Centromere counts
 Title: sgRNA screen for the identification of regulators of centromere clustering
-Version: 1.1
-Date: July 2022
+Version: 1.2
+Date: Feb 2025
 Screentype: sgRNA
 Organism: Homo Sapiens
 Celltype: hTERT-RPE1-Cas9_p53+/+
