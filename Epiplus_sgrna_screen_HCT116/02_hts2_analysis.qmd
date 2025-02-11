@@ -1,108 +1,168 @@
 ---
 title:  CENPC Screen - HCT116 -  sgRNA Epigenetics Plus - cellHTS2 analysis
 author: "Krishnendu Guin/ Adib Keikhosravi/ Gianluca Pegoraro"
-date: "August 20th 2022"
-output: "html_document"
+date: today
+date-format: long
+format: 
+  html:
+      self-contained: true
+      code-fold: true
+      code-tools: true
+      code-link: true
+editor: source
 ---
+## README
+
+This Script is used to run CellHTS2 analysis on multiple variables.
 
 ## Setup
 
 Load packages.
 
 ```{r}
+#| label: load-libraries
+#| message: false
+#| warning: false
+
 library(tidyverse)
 library(cellHTS2)
-library(qs)
+library(qs2)
 ```
 
 ### User variables input and settings specification
 
+Set the working directory to the location of the script.
+
+```{r}
+here::i_am("Epiplus_sgrna_screen_HCT116/01_hts2_dataprep.qmd")
+```
+
 The chunk below assigns the Columbus variable chosen for analysis and sets the `cellHTS2` input and output directories names accordingly .
 
 ```{r}
-well_tbl <- qread("cache/hitips_well_results.qs") %>% tibble()
-annotation_tbl <- read_tsv("hts2_metadata/Annotation.txt")
+library(here)
 
-var_names <- well_tbl %>% select(cell_n:spots_number_mean) %>% names()
+well_tbl <- qs_read(here(
+  "Epiplus_sgrna_screen_HCT116",
+  "cache",
+  "hitips_well_results.qs2"
+)) |>
+  tibble()
+
+annotation_tbl <- read_tsv(here(
+  "Epiplus_sgrna_screen_HCT116",
+  "hts2_metadata",
+  "Annotation.txt"
+))
+
+var_names <- well_tbl |>
+  select(cell_n:spots_number_mean) |>
+  names()
 ```
 
 ## `cellHTS2` data analysis
 
-```{r importPlateList}
-##`cellHTS2` data analysis function
+```{r}
+#| label: cellhts2-analysis
 
-calculate_HTS2 <- function(meas_select, in_dir = NULL, metadata_dir = NULL, out_dir = NULL){
-  
-  #Read the measurement files in the in_dir directory. 
-  obj <- readPlateList(filename = "Platelist.txt",
-                             name = meas_select,
-                             path = file.path(in_dir, meas_select))
-  
-  #Configure the cellHTS2 object
+calculate_HTS2 <- function(meas_select, in_dir = NULL, metadata_dir = NULL, out_dir = NULL) {
+  # Read the measurement files in the in_dir directory.
+  obj <- readPlateList(
+    filename = "Platelist.txt",
+    name = meas_select,
+    path = fs::path(in_dir, meas_select)
+  )
+
+  # Configure the cellHTS2 object
   obj <- configure(obj,
-                   descripFile = "Description.txt",
-                   confFile = "Plateconf.txt",
-                   path = metadata_dir)
-  
-  #Normalize the measurements on a per plate-basis.
+    descripFile = "Description.txt",
+    confFile = "Plateconf.txt",
+    path = metadata_dir
+  )
+
+  # Normalize the measurements on a per plate-basis.
   obj_n <- normalizePlates(obj,
-                          scale = "additive",
-                          log = FALSE,
-                          method = "Bscore", #Spatial normalization
-                          varianceAdjust = "byPlate")
+    scale = "additive",
+    log = FALSE,
+    method = "Bscore", # Spatial normalization
+    varianceAdjust = "byPlate"
+  )
 
-  #Score the replicates by taking the Z-score of the B-score distribution 
+  # Score the replicates by taking the Z-score of the B-score distribution
   # calculated in the previous chunk.
-  obj_sc <- scoreReplicates(obj_n, 
-                            sign = "+", 
-                            method = "zscore")
-  
-  #Summarize the replicates. In this particular case the final Z-score is going 
-  # to be the mean of the two replicates Z-scores. 
-  obj_sc <-summarizeReplicates(obj_sc, 
-                               summary = "mean")
-  
-  # Annotate the cellHTS2 object with gene names and siRNA id's. 
-  obj_sc <- cellHTS2::annotate(obj_sc,
-                               geneIDFile = "Annotation.txt",
-                               path = metadata_dir)
+  obj_sc <- scoreReplicates(obj_n,
+    sign = "+",
+    method = "zscore"
+  )
 
-  #Save the cellHTS2 object as an `.rda` file in the appropriate results 
-  #subfolder in case someone wants to inspect it and/or further process it.
-  save(obj_sc, file = file.path(out_dir, 
-                                meas_select, 
-                                "obj_sc.rda"))
-  
-    
-  setSettings(list(plateList = list(reproducibility = list(include = TRUE, 
-                                                           map = TRUE),
-                                    intensities = list(include = TRUE, map = TRUE)),
-                   screenSummary = list(scores = list(range = c(-8, 8), map = TRUE))))
-  
+  # Summarize the replicates. In this particular case the final Z-score is going
+  # to be the mean of the two replicates Z-scores.
+  obj_sc <- summarizeReplicates(obj_sc,
+    summary = "mean"
+  )
+
+  # Annotate the cellHTS2 object with gene names and siRNA id's.
+  obj_sc <- cellHTS2::annotate(obj_sc,
+    geneIDFile = "Annotation.txt",
+    path = metadata_dir
+  )
+
+  # Save the cellHTS2 object as an `.rda` file in the appropriate results
+  # subfolder in case someone wants to inspect it and/or further process it.
+  save(obj_sc, file = fs::path(
+    out_dir,
+    meas_select,
+    "obj_sc.rda"
+  ))
+
+
+  setSettings(list(
+    plateList = list(
+      reproducibility = list(
+        include = TRUE,
+        map = TRUE
+      ),
+      intensities = list(include = TRUE, map = TRUE)
+    ),
+    screenSummary = list(scores = list(range = c(-8, 8), map = TRUE))
+  ))
+
   # Write the report in the appropriate output directory
-  cellHTS2_report <- writeReport(raw = obj,
-                                normalized = obj_n,
-                                scored = obj_sc,
-                                outdir = file.path(out_dir, 
-                                                   meas_select),
-                                force = TRUE,
-                                mainScriptFile = "HTS2_Analysis.Rmd")
-  
+  cellHTS2_report <- writeReport(
+    raw = obj,
+    normalized = obj_n,
+    scored = obj_sc,
+    outdir = fs::path(
+      out_dir,
+      meas_select
+    ),
+    force = TRUE,
+    mainScriptFile = "HTS2_Analysis.Rmd"
+  )
+
   # Write the results table in the appropriate output directory
-  results_tbl <- getTopTable(cellHTSlist = list("raw" = obj,
-                                                "normalized" = obj_n,
-                                                "scored" = obj_sc),
-                             file = file.path(out_dir,
-                                             meas_select,
-                                             "Results_table.txt"))
+  results_tbl <- getTopTable(
+    cellHTSlist = list(
+      "raw" = obj,
+      "normalized" = obj_n,
+      "scored" = obj_sc
+    ),
+    file = fs::path(
+      out_dir,
+      meas_select,
+      "Results_table.txt"
+    )
+  )
 }
 ```
 
 ```{r}
-var_names %>% walk(calculate_HTS2, in_dir = "hts2_input/", 
-                   metadata_dir = "hts2_metadata/", 
-                   out_dir = "hts2_output/")
-```
+var_names |> walk(calculate_HTS2,
+  in_dir = here("Epiplus_sgrna_screen_HCT116", "hts2_input/"),
+  metadata_dir = here("Epiplus_sgrna_screen_HCT116", "hts2_metadata/"),
+  out_dir = here("Epiplus_sgrna_screen_HCT116", "hts2_output/")
+)
+ ```
 
 Document the information about the analysis session
 
