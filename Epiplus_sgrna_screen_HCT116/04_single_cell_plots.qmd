@@ -36,7 +36,7 @@ library(qs2)
 theme_set(theme_bw())
 theme_update(
   axis.text.x = element_text(
-    angle = -90,
+    angle = -45,
     hjust = 0,
     vjust = 0.5
   ),
@@ -205,6 +205,17 @@ cell_controls_tbl |>
   count(class, well_index)
 ```
 
+Summarize the different variables for the controls at the well level.
+
+```{r}
+well_controls_tbl <- cell_controls_tbl |>
+  group_by(plate_index, bio_rep, class, well_index) |>
+  summarize(across(area:spots_number, list(mean = ~ mean(.x, na.rm = TRUE)))) |>
+  ungroup()
+
+glimpse(well_controls_tbl)
+```
+
 ### Controls Single Cell Plots
 
 This is a density plot of single cell values for the number of CENPC Spots per cell only for the controls. Each density line corresponds to one well. Rows facets are biological replicates, Column facets are plate library numbers.  
@@ -360,6 +371,55 @@ cell_hits_tbl |>
 cell_hits_tbl |>
   group_by(plotting_group) |>
   group_map(~ plot_ecdf(.x, k_corr_perc))
+```
+
+### Well Level Plots for Controls
+
+```{r}
+#| label: plot-crossbar
+
+plot_crossbar <- function(df, property, y_legend = "") {
+  df |>
+    filter(class != "sgPLK1") |>
+    ggplot(aes(
+      x = class,
+      y = {{ property }}
+    )) +
+    geom_point(
+      alpha = 0.3,
+      position = position_jitter(width = 0.2)
+    ) +
+    stat_summary(
+      fun.data = "mean_sdl",
+      fun.args = list(mult = 1),
+      geom = "crossbar"
+    ) +
+    facet_wrap(vars(bio_rep)) +
+    labs(
+      x = "sgRNA",
+      y = y_legend
+    )
+}
+```
+
+```{r}
+#| label: spots-n-crossbar-controls
+
+well_controls_tbl |>
+  plot_crossbar(
+    property = spots_number_mean,
+    y_legend = "Mean Number of CENPC Spots per Cell\nMean per Well+/-SD"
+  )
+```
+
+```{r}
+#| label: k-crossbar-controls
+
+well_controls_tbl |>
+  plot_crossbar(
+    property = k_corr_perc_mean,
+    y_legend = "K Clustering Score\nMean per Well+/-SD"
+  )
 ```
 
 Document the information about the analysis session
