@@ -56,85 +56,120 @@ here::i_am("Epiplus_sgrna_screen_RPE1/03_hts2_results_plotting.qmd")
 Read the `cellHTS2` results from the `hts2_output` directory.
 
 ```{r}
-
 library(here)
 read_hts2_results <- function(path, glob) {
-  dir_ls(path = path,
-         recurse = T,
-         glob = glob) |>
+  dir_ls(
+    path = path,
+    recurse = T,
+    glob = glob
+  ) |>
     map_df(read_tsv,
-           .id = "file_name")
+      .id = "file_name"
+    )
 }
 
 glob_path <- "*Results_table.txt"
 hts2_output_path <- here("Epiplus_sgrna_screen_RPE1", "hts2_output")
 
 all_tbl <- read_hts2_results(hts2_output_path, glob_path) |>
-    filter(!(is.na(score))) |>
-    mutate(prop = str_match(file_name, "hts2_output/(.*?)/")[,2]) |>
-    select(plate, 
-           well, 
-           control = wellAnno,
-           gene_symbol = GeneSymbol,
-           prop,
-           score,
-           raw_repeat_1 = raw_r1_ch1,
-           raw_repeat_2 = raw_r2_ch1,
-           ratio_repeat_1 = `raw/PlateMedian_r1_ch1`,
-           ratio_repeat_2 = `raw/PlateMedian_r2_ch1`,
-           norm_repeat1 = normalized_r1_ch1,
-           norm_repeat2 = normalized_r2_ch1) |>
-    pivot_wider(names_from = prop,
-                values_from = c(score,
-                                raw_repeat_1,
-                                raw_repeat_2,
-                                ratio_repeat_1,
-                                ratio_repeat_2,
-                                norm_repeat1,
-                                norm_repeat2)) |>
-    rowwise() |>
-    mutate(sd_cell_n = sd(c(norm_repeat1_cell_n, 
-                          norm_repeat2_cell_n),
-                          na.rm = T),
-           sd_k_area_mean = sd(c(norm_repeat1_area_mean,
-                                    norm_repeat2_area_mean),
-                                    na.rm = T),
-           sd_k_corr_perc_mean = sd(c(norm_repeat1_k_corr_perc_mean,
-                                    norm_repeat2_k_corr_perc_mean),
-                                    na.rm = T),
-           sd_radial_dist_mean_mean = sd(c(norm_repeat1_radial_dist_mean_mean,
-                                    norm_repeat2_radial_dist_mean_mean),
-                                    na.rm = T),
-           sd_spots_number_mean = sd(c(norm_repeat1_spots_number_mean,
-                                     norm_repeat2_spots_number_mean),
-                                     na.rm = T)) |>
+  filter(!(is.na(score))) |>
+  mutate(prop = str_match(file_name, "hts2_output/(.*?)/")[, 2]) |>
+  select(plate,
+    well,
+    control = wellAnno,
+    gene_symbol = GeneSymbol,
+    prop,
+    score,
+    raw_repeat_1 = raw_r1_ch1,
+    raw_repeat_2 = raw_r2_ch1,
+    ratio_repeat_1 = `raw/PlateMedian_r1_ch1`,
+    ratio_repeat_2 = `raw/PlateMedian_r2_ch1`,
+    norm_repeat1 = normalized_r1_ch1,
+    norm_repeat2 = normalized_r2_ch1
+  ) |>
+  pivot_wider(
+    names_from = prop,
+    values_from = c(
+      score,
+      raw_repeat_1,
+      raw_repeat_2,
+      ratio_repeat_1,
+      ratio_repeat_2,
+      norm_repeat1,
+      norm_repeat2
+    )
+  ) |>
+  rowwise() |>
+  mutate(
+    sd_cell_n = sd(
+      c(
+        norm_repeat1_cell_n,
+        norm_repeat2_cell_n
+      ),
+      na.rm = T
+    ),
+    sd_k_area_mean = sd(
+      c(
+        norm_repeat1_area_mean,
+        norm_repeat2_area_mean
+      ),
+      na.rm = T
+    ),
+    sd_k_corr_perc_mean = sd(
+      c(
+        norm_repeat1_k_corr_perc_mean,
+        norm_repeat2_k_corr_perc_mean
+      ),
+      na.rm = T
+    ),
+    sd_radial_dist_mean_mean = sd(
+      c(
+        norm_repeat1_radial_dist_mean_mean,
+        norm_repeat2_radial_dist_mean_mean
+      ),
+      na.rm = T
+    ),
+    sd_spots_number_mean = sd(
+      c(
+        norm_repeat1_spots_number_mean,
+        norm_repeat2_spots_number_mean
+      ),
+      na.rm = T
+    )
+  ) |>
   ungroup() |>
   mutate(cell_line = "RPE1") |>
   relocate(cell_line) |>
   arrange(desc(score_k_corr_perc_mean))
-  
+
 glimpse(all_tbl)
 ```
 
 Write the results to a csv file.
 
 ```{r}
-write_csv(all_tbl, here("Epiplus_sgrna_screen_RPE1", "knitr_output","rpe1_all_genes.csv"))
+write_csv(all_tbl, here("Epiplus_sgrna_screen_RPE1", "knitr_output", "rpe1_all_genes.csv"))
 ```
 
 ```{r}
 #|label: plot-cell-n-repeats
 
-cell_n_repeats <- all_tbl |> 
-  ggplot(aes(x = norm_repeat1_cell_n, 
-             y = norm_repeat2_cell_n))
+cell_n_repeats <- all_tbl |>
+  ggplot(aes(
+    x = norm_repeat1_cell_n,
+    y = norm_repeat2_cell_n
+  ))
 
-cell_n_repeats + 
-  geom_point(shape = 21,
-             aes(color = control)) + 
-  geom_smooth(method = "lm",
-              color = "grey50",
-              se = F) +
+cell_n_repeats +
+  geom_point(
+    shape = 21,
+    aes(color = control)
+  ) +
+  geom_smooth(
+    method = "lm",
+    color = "grey50",
+    se = F
+  ) +
   coord_equal() +
   scale_color_few(name = "Treatment") +
   xlab("z-score Repeat 1") +
@@ -145,16 +180,22 @@ cell_n_repeats +
 ```{r}
 #|label: plot-area-repeats
 
-area_repeats <- all_tbl |> 
-  ggplot(aes(x = norm_repeat1_area, 
-             y = norm_repeat2_area))
+area_repeats <- all_tbl |>
+  ggplot(aes(
+    x = norm_repeat1_area,
+    y = norm_repeat2_area
+  ))
 
-cell_n_repeats + 
-  geom_point(shape = 21,
-             aes(color = control)) + 
-  geom_smooth(method = "lm",
-              color = "grey50",
-              se = F) +
+cell_n_repeats +
+  geom_point(
+    shape = 21,
+    aes(color = control)
+  ) +
+  geom_smooth(
+    method = "lm",
+    color = "grey50",
+    se = F
+  ) +
   coord_equal() +
   scale_color_few(name = "Treatment") +
   xlab("z-score Repeat 1") +
@@ -165,16 +206,22 @@ cell_n_repeats +
 ```{r}
 #|label: spot-n-repeats
 
-spot_n_repeats <- all_tbl |> 
-  ggplot(aes(x = norm_repeat1_spots_number_mean, 
-             y = norm_repeat2_spots_number_mean))
+spot_n_repeats <- all_tbl |>
+  ggplot(aes(
+    x = norm_repeat1_spots_number_mean,
+    y = norm_repeat2_spots_number_mean
+  ))
 
-spot_n_repeats + 
-  geom_point(shape = 21,
-             aes(color = control)) + 
-  geom_smooth(method = "lm",
-              color = "grey50",
-              se = F) +
+spot_n_repeats +
+  geom_point(
+    shape = 21,
+    aes(color = control)
+  ) +
+  geom_smooth(
+    method = "lm",
+    color = "grey50",
+    se = F
+  ) +
   coord_equal() +
   scale_color_few(name = "Treatment") +
   xlab("z-score Repeat 1") +
@@ -185,16 +232,22 @@ spot_n_repeats +
 ```{r}
 #|label: k-repeats
 
-k_repeats <- all_tbl |> 
-  ggplot(aes(x = norm_repeat1_k_corr_perc_mean, 
-             y = norm_repeat2_k_corr_perc_mean))
+k_repeats <- all_tbl |>
+  ggplot(aes(
+    x = norm_repeat1_k_corr_perc_mean,
+    y = norm_repeat2_k_corr_perc_mean
+  ))
 
-k_repeats + 
-  geom_point(shape = 21,
-             aes(color = control)) + 
-  geom_smooth(method = "lm",
-              color = "grey50",
-              se = F) +
+k_repeats +
+  geom_point(
+    shape = 21,
+    aes(color = control)
+  ) +
+  geom_smooth(
+    method = "lm",
+    color = "grey50",
+    se = F
+  ) +
   coord_equal() +
   scale_color_few(name = "Treatment") +
   xlab("z-score Repeat 1") +
@@ -205,13 +258,17 @@ k_repeats +
 ```{r cell_n-vs-spot_n, echo = F}
 #| label: cell_n-vs-spot_n
 
-cell_n_spot_n <- all_tbl |> 
-  ggplot(aes(x = score_cell_n, 
-             y = score_spots_number_mean))
+cell_n_spot_n <- all_tbl |>
+  ggplot(aes(
+    x = score_cell_n,
+    y = score_spots_number_mean
+  ))
 
-cell_n_spot_n  + 
-  geom_point(shape = 21,
-             aes(color = control)) + 
+cell_n_spot_n +
+  geom_point(
+    shape = 21,
+    aes(color = control)
+  ) +
   scale_color_few(name = "Treatment") +
   xlab("Mean z-score Cell Number") +
   ylab("Mean z-score CENPC Spots") +
@@ -221,13 +278,17 @@ cell_n_spot_n  +
 ```{r}
 #| label: cell_n-vs-ripley-k
 
-cell_n_ripley_k <- all_tbl |> 
-  ggplot(aes(x = score_cell_n, 
-             y = score_k_corr_perc_mean))
+cell_n_ripley_k <- all_tbl |>
+  ggplot(aes(
+    x = score_cell_n,
+    y = score_k_corr_perc_mean
+  ))
 
-cell_n_ripley_k  + 
-  geom_point(shape = 21,
-             aes(color = control)) + 
+cell_n_ripley_k +
+  geom_point(
+    shape = 21,
+    aes(color = control)
+  ) +
   scale_color_few(name = "Treatment") +
   xlab("Mean z-score Cell Number") +
   ylab("Mean z-score Ripley's K") +
@@ -237,13 +298,17 @@ cell_n_ripley_k  +
 ```{r}
 #| label: spot-n-vs-ripley-k
 
-spot_n_ripley_k <- all_tbl |> 
-  ggplot(aes(x = score_spots_number_mean, 
-             y = score_k_corr_perc_mean))
+spot_n_ripley_k <- all_tbl |>
+  ggplot(aes(
+    x = score_spots_number_mean,
+    y = score_k_corr_perc_mean
+  ))
 
-spot_n_ripley_k  + 
-  geom_point(shape = 21,
-             aes(color = control)) + 
+spot_n_ripley_k +
+  geom_point(
+    shape = 21,
+    aes(color = control)
+  ) +
   scale_color_few(name = "Treatment") +
   xlab("Mean z-score CENPC Spots") +
   ylab("Mean z-score Ripley's K") +
@@ -253,13 +318,17 @@ spot_n_ripley_k  +
 ```{r}
 #| label: area-vs-ripley-k
 
-spot_n_ripley_k <- all_tbl |> 
-  ggplot(aes(x = score_area_mean, 
-             y = score_k_corr_perc_mean))
+spot_n_ripley_k <- all_tbl |>
+  ggplot(aes(
+    x = score_area_mean,
+    y = score_k_corr_perc_mean
+  ))
 
-spot_n_ripley_k  + 
-  geom_point(shape = 21,
-             aes(color = control)) + 
+spot_n_ripley_k +
+  geom_point(
+    shape = 21,
+    aes(color = control)
+  ) +
   scale_color_few(name = "Treatment") +
   xlab("Mean z-score Nucleus Area") +
   ylab("Mean z-score Ripley's K") +
@@ -284,15 +353,17 @@ putative_hits_k <- samples |>
     score_cell_n > -2,
     abs(score_k_corr_perc_mean) > sd_k_corr_perc_mean,
   ) |>
-  select(plate:gene_symbol, 
-         score_k_corr_perc_mean,
-         sd_k_corr_perc_mean,
-         score_spots_number_mean,
-         sd_spots_number_mean,
-         score_cell_n,
-         sd_cell_n,
-         score_radial_dist_mean_mean,
-         sd_radial_dist_mean_mean) |>
+  select(
+    plate:gene_symbol,
+    score_k_corr_perc_mean,
+    sd_k_corr_perc_mean,
+    score_spots_number_mean,
+    sd_spots_number_mean,
+    score_cell_n,
+    sd_cell_n,
+    score_radial_dist_mean_mean,
+    sd_radial_dist_mean_mean
+  ) |>
   arrange(desc(score_k_corr_perc_mean))
 
 rmarkdown::paged_table(putative_hits_k)
@@ -307,15 +378,17 @@ putative_hits_n <- samples |>
     score_cell_n > -2,
     abs(score_spots_number_mean) > sd_spots_number_mean,
   ) |>
-  select(plate:gene_symbol, 
-         score_k_corr_perc_mean,
-         sd_k_corr_perc_mean,
-         score_spots_number_mean,
-         sd_spots_number_mean,
-         score_cell_n,
-         sd_cell_n,
-         score_radial_dist_mean_mean,
-         sd_radial_dist_mean_mean) |>
+  select(
+    plate:gene_symbol,
+    score_k_corr_perc_mean,
+    sd_k_corr_perc_mean,
+    score_spots_number_mean,
+    sd_spots_number_mean,
+    score_cell_n,
+    sd_cell_n,
+    score_radial_dist_mean_mean,
+    sd_radial_dist_mean_mean
+  ) |>
   arrange(desc(score_spots_number_mean))
 
 rmarkdown::paged_table(putative_hits_n)
@@ -326,19 +399,21 @@ rmarkdown::paged_table(putative_hits_n)
 
 putative_hits_r <- samples |>
   filter(
-    score_radial_dist_mean_mean > 3 |  score_radial_dist_mean_mean < -3,
+    score_radial_dist_mean_mean > 3 | score_radial_dist_mean_mean < -3,
     score_cell_n > -2,
-    abs(score_radial_dist_mean_mean) >  sd_radial_dist_mean_mean,
+    abs(score_radial_dist_mean_mean) > sd_radial_dist_mean_mean,
   ) |>
-  select(plate:gene_symbol, 
-         score_k_corr_perc_mean,
-         sd_k_corr_perc_mean,
-         score_spots_number_mean,
-         sd_spots_number_mean,
-         score_cell_n,
-         sd_cell_n,
-         score_radial_dist_mean_mean,
-         sd_radial_dist_mean_mean) |>
+  select(
+    plate:gene_symbol,
+    score_k_corr_perc_mean,
+    sd_k_corr_perc_mean,
+    score_spots_number_mean,
+    sd_spots_number_mean,
+    score_cell_n,
+    sd_cell_n,
+    score_radial_dist_mean_mean,
+    sd_radial_dist_mean_mean
+  ) |>
   arrange(desc(score_radial_dist_mean_mean))
 
 rmarkdown::paged_table(putative_hits_r)
