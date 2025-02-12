@@ -254,7 +254,7 @@ k_repeats +
   ggtitle("% of Ripley's K curve above Poisson")
 ```
 
-```{r cell_n-vs-spot_n, echo = F}
+```{r}
 #| label: cell_n-vs-spot_n
 
 cell_n_spot_n <- all_tbl |>
