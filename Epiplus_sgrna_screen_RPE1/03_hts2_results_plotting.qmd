@@ -1,24 +1,40 @@
 ---
-title: "CENPC Screen - TERT-RPE1 - sgRNA Epigenetics Plus - downstream_Analysis"
+title: "CENPC Screen - hTERT-RPE1 - sgRNA Epigenetics Plus - downstream_Analysis"
 author: "Krishnendu Guin/ Adib Keikhosravi / Gianluca Pegoraro"
-date: "August 20th 2022"
-output: html_document
+date: today
+date-format: long
+format: 
+  html:
+      self-contained: true
+      code-fold: true
+      code-tools: true
+      code-link: true
+editor: source
 ---
 
+## README
+
+This script is used to further process the cellHTS2 results for downstream analysis. All the variables output from cellHTS2 analysis are collated in a single table for further analysis and plotting.
+
+## Setup
+
+Load packages.
+
 ```{r}
+#| label: load-libraries
+#| message: false
+#| warning: false
+
 library(tidyverse)
 library(ggthemes)
 library(fs)
 ```
 
-```{r, include=FALSE, warning=FALSE}
-knitr::opts_chunk$set(
-  fig.path = 'knitr_output/',
-  cache = FALSE,
-  dev = c("png"),
-  message = FALSE,
-  warning = FALSE
-)
+```{r}
+#| label: set-theme
+#| include: false
+#| message: false
+#| warning: false
 
 theme_set(theme_bw())
 theme_update(
@@ -32,19 +48,30 @@ theme_update(
 ```
 
 ```{r}
+here::i_am("Epiplus_sgrna_screen_RPE1/03_hts2_results_plotting.qmd")
+```
+
+## Read `cellHTS2` results
+
+Read the `cellHTS2` results from the `hts2_output` directory.
+
+```{r}
+
+library(here)
 read_hts2_results <- function(path, glob) {
   dir_ls(path = path,
          recurse = T,
-         glob = glob) %>%
+         glob = glob) |>
     map_df(read_tsv,
            .id = "file_name")
 }
 
 glob_path <- "*Results_table.txt"
+hts2_output_path <- here("Epiplus_sgrna_screen_RPE1", "hts2_output")
 
-all_tbl <- read_hts2_results("hts2_output", glob_path) %>%
-    filter(!(is.na(score))) %>%
-    mutate(prop = str_match(file_name, "hts2_output/(.*?)/")[,2]) %>%
+all_tbl <- read_hts2_results(hts2_output_path, glob_path) |>
+    filter(!(is.na(score))) |>
+    mutate(prop = str_match(file_name, "hts2_output/(.*?)/")[,2]) |>
     select(plate, 
            well, 
            control = wellAnno,
@@ -56,7 +83,7 @@ all_tbl <- read_hts2_results("hts2_output", glob_path) %>%
            ratio_repeat_1 = `raw/PlateMedian_r1_ch1`,
            ratio_repeat_2 = `raw/PlateMedian_r2_ch1`,
            norm_repeat1 = normalized_r1_ch1,
-           norm_repeat2 = normalized_r2_ch1) %>%
+           norm_repeat2 = normalized_r2_ch1) |>
     pivot_wider(names_from = prop,
                 values_from = c(score,
                                 raw_repeat_1,
@@ -64,8 +91,8 @@ all_tbl <- read_hts2_results("hts2_output", glob_path) %>%
                                 ratio_repeat_1,
                                 ratio_repeat_2,
                                 norm_repeat1,
-                                norm_repeat2)) %>%
-    rowwise() %>%
+                                norm_repeat2)) |>
+    rowwise() |>
     mutate(sd_cell_n = sd(c(norm_repeat1_cell_n, 
                           norm_repeat2_cell_n),
                           na.rm = T),
@@ -80,21 +107,25 @@ all_tbl <- read_hts2_results("hts2_output", glob_path) %>%
                                     na.rm = T),
            sd_spots_number_mean = sd(c(norm_repeat1_spots_number_mean,
                                      norm_repeat2_spots_number_mean),
-                                     na.rm = T)) %>%
-  ungroup() %>%
-  mutate(cell_line = "RPE1") %>%
-  relocate(cell_line) %>%
+                                     na.rm = T)) |>
+  ungroup() |>
+  mutate(cell_line = "RPE1") |>
+  relocate(cell_line) |>
   arrange(desc(score_k_corr_perc_mean))
   
 glimpse(all_tbl)
 ```
 
+Write the results to a csv file.
+
 ```{r}
-write_csv(all_tbl, "knitr_output/rpe1_all_genes.csv")
+write_csv(all_tbl, here("Epiplus_sgrna_screen_RPE1", "knitr_output","rpe1_all_genes.csv"))
 ```
 
-```{r cell-n-repeats, echo = F}
-cell_n_repeats <- all_tbl %>% 
+```{r}
+#|label: plot-cell-n-repeats
+
+cell_n_repeats <- all_tbl |> 
   ggplot(aes(x = norm_repeat1_cell_n, 
              y = norm_repeat2_cell_n))
 
@@ -111,8 +142,10 @@ cell_n_repeats +
   ggtitle("Cell Number")
 ```
 
-```{r area-repeats, echo = F}
-area_repeats <- all_tbl %>% 
+```{r}
+#|label: plot-area-repeats
+
+area_repeats <- all_tbl |> 
   ggplot(aes(x = norm_repeat1_area, 
              y = norm_repeat2_area))
 
@@ -129,8 +162,10 @@ cell_n_repeats +
   ggtitle("Nucleus Area")
 ```
 
-```{r spot-n-repeats, echo = F}
-spot_n_repeats <- all_tbl %>% 
+```{r}
+#|label: spot-n-repeats
+
+spot_n_repeats <- all_tbl |> 
   ggplot(aes(x = norm_repeat1_spots_number_mean, 
              y = norm_repeat2_spots_number_mean))
 
@@ -147,8 +182,10 @@ spot_n_repeats +
   ggtitle("CENPC Spots Number")
 ```
 
-```{r k-repeats, echo = F}
-k_repeats <- all_tbl %>% 
+```{r}
+#|label: k-repeats
+
+k_repeats <- all_tbl |> 
   ggplot(aes(x = norm_repeat1_k_corr_perc_mean, 
              y = norm_repeat2_k_corr_perc_mean))
 
@@ -166,7 +203,9 @@ k_repeats +
 ```
 
 ```{r cell_n-vs-spot_n, echo = F}
-cell_n_spot_n <- all_tbl %>% 
+#| label: cell_n-vs-spot_n
+
+cell_n_spot_n <- all_tbl |> 
   ggplot(aes(x = score_cell_n, 
              y = score_spots_number_mean))
 
@@ -179,8 +218,10 @@ cell_n_spot_n  +
   ggtitle("Cell Number vs. CENPC Spots Number")
 ```
 
-```{r cell_n-vs-ripley-k, echo = F}
-cell_n_ripley_k <- all_tbl %>% 
+```{r}
+#| label: cell_n-vs-ripley-k
+
+cell_n_ripley_k <- all_tbl |> 
   ggplot(aes(x = score_cell_n, 
              y = score_k_corr_perc_mean))
 
@@ -193,8 +234,10 @@ cell_n_ripley_k  +
   ggtitle("Cell Number vs. Ripley's K")
 ```
 
-```{r spot-n-vs-ripley-k, echo = F}
-spot_n_ripley_k <- all_tbl %>% 
+```{r}
+#| label: spot-n-vs-ripley-k
+
+spot_n_ripley_k <- all_tbl |> 
   ggplot(aes(x = score_spots_number_mean, 
              y = score_k_corr_perc_mean))
 
@@ -207,8 +250,10 @@ spot_n_ripley_k  +
   ggtitle("CENPC Spots Number vs. Ripley's K")
 ```
 
-```{r area-vs-ripley-k, echo = F}
-spot_n_ripley_k <- all_tbl %>% 
+```{r}
+#| label: area-vs-ripley-k
+
+spot_n_ripley_k <- all_tbl |> 
   ggplot(aes(x = score_area_mean, 
              y = score_k_corr_perc_mean))
 
@@ -222,7 +267,7 @@ spot_n_ripley_k  +
 ```
 
 ```{r}
-samples <- all_tbl %>%
+samples <- all_tbl |>
   filter(control == "sample")
 
 glimpse(samples)
@@ -230,13 +275,15 @@ glimpse(samples)
 
 Filter putative hits based on Z-score for Ripley's K above or below +/-3, no cytotoxicity, and limited variance between biological replicates.
 
-```{r putative-hits-k, results='asis'}
-putative_hits_k <- samples %>%
+```{r}
+#| label: putative-hits-k
+
+putative_hits_k <- samples |>
   filter(
     score_k_corr_perc_mean > 3 | score_k_corr_perc_mean < -3,
     score_cell_n > -2,
     abs(score_k_corr_perc_mean) > sd_k_corr_perc_mean,
-  ) %>%
+  ) |>
   select(plate:gene_symbol, 
          score_k_corr_perc_mean,
          sd_k_corr_perc_mean,
@@ -245,21 +292,21 @@ putative_hits_k <- samples %>%
          score_cell_n,
          sd_cell_n,
          score_radial_dist_mean_mean,
-         sd_radial_dist_mean_mean) %>%
+         sd_radial_dist_mean_mean) |>
   arrange(desc(score_k_corr_perc_mean))
 
-write_csv(putative_hits_k, "knitr_output/rpe1_putative_hits_k.csv")
-
-knitr::kable(putative_hits_k, digits = 2)
+rmarkdown::paged_table(putative_hits_k)
 ```
 
-```{r putative-hits-n, results='asis'}
-putative_hits_n <- samples %>%
+```{r}
+#| label: putative-hits-n
+
+putative_hits_n <- samples |>
   filter(
     score_spots_number_mean > 3 | score_spots_number_mean < -3,
     score_cell_n > -2,
     abs(score_spots_number_mean) > sd_spots_number_mean,
-  ) %>%
+  ) |>
   select(plate:gene_symbol, 
          score_k_corr_perc_mean,
          sd_k_corr_perc_mean,
@@ -268,21 +315,21 @@ putative_hits_n <- samples %>%
          score_cell_n,
          sd_cell_n,
          score_radial_dist_mean_mean,
-         sd_radial_dist_mean_mean) %>%
+         sd_radial_dist_mean_mean) |>
   arrange(desc(score_spots_number_mean))
 
-write_csv(putative_hits_n, "knitr_output/rpe1_putative_hits_n.csv")
-
-knitr::kable(putative_hits_n, digits = 2)
+rmarkdown::paged_table(putative_hits_n)
 ```
 
-```{r putative-hits-r, results='asis'}
-putative_hits_r <- samples %>%
+```{r}
+#| label: putative-hits-r
+
+putative_hits_r <- samples |>
   filter(
     score_radial_dist_mean_mean > 3 |  score_radial_dist_mean_mean < -3,
     score_cell_n > -2,
     abs(score_radial_dist_mean_mean) >  sd_radial_dist_mean_mean,
-  ) %>%
+  ) |>
   select(plate:gene_symbol, 
          score_k_corr_perc_mean,
          sd_k_corr_perc_mean,
@@ -291,16 +338,17 @@ putative_hits_r <- samples %>%
          score_cell_n,
          sd_cell_n,
          score_radial_dist_mean_mean,
-         sd_radial_dist_mean_mean) %>%
+         sd_radial_dist_mean_mean) |>
   arrange(desc(score_radial_dist_mean_mean))
 
-write_csv(putative_hits_r, "knitr_output/rpe1_putative_hits_r.csv")
-
-knitr::kable(putative_hits_r, digits = 2)
+rmarkdown::paged_table(putative_hits_r)
 ```
 
 Document the information about the analysis session
 
-```{r sessionInfo, results='markup'}
+```{r}
+#| label: session-info
+#| results: markup
+
 sessionInfo()
 ```
