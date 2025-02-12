@@ -1,5 +1,5 @@
 ---
-title: "CENPC Screen - Joint HCT116/TERT-RPE1 - sgRNA Epigenetics Plus - downstream_Analysis"
+title: "CENPC Screen - Joint HCT116/TERT-RPE1 - sgRNA Epigenetics Plus - Downstream Analysis"
 author: "Krishnendu Guin/ Adib Keikhosravi / Gianluca Pegoraro"
 date: today
 date-format: long
@@ -70,7 +70,7 @@ glimpse(all_tbl)
 Process the final results to generate a wide format table for plotting. Each row in the table corresponds to a unique plate/well combination. Each sgRNA treatment in the library corresponds to a unique plate/well combination. Positive and negative sgRNAcontrols are also included in the table but have multiple plate/well combinations. This wide table will also be used to generate the list of hits for either cell line.
 
 ```{r}
-all_tbl_wide <- all_tbl |> 
+all_tbl_wide <- all_tbl |>
   pivot_wider(
     names_from = cell_line,
     values_from = score_area_mean:sd_spots_number_mean
@@ -99,10 +99,10 @@ cell_n_cutoff <- 2.5
 all_hits_tbl <- all_tbl_wide |>
   filter(control == "sample") |>
   filter(
-     (abs(score_k_corr_perc_mean_HCT116) > hit_cutoff) & (abs(score_k_corr_perc_mean_HCT116) > sd_k_corr_perc_mean_HCT116) | 
-     (abs(score_k_corr_perc_mean_RPE1) > hit_cutoff) & (abs(score_k_corr_perc_mean_RPE1) > sd_k_corr_perc_mean_RPE1) | 
-     (abs(score_spots_number_mean_HCT116) > hit_cutoff) & (abs(score_spots_number_mean_HCT116) > sd_spots_number_mean_HCT116) | 
-     (abs(score_spots_number_mean_RPE1) > hit_cutoff) & (abs(score_spots_number_mean_RPE1) > sd_spots_number_mean_RPE1)
+    (abs(score_k_corr_perc_mean_HCT116) > hit_cutoff) & (abs(score_k_corr_perc_mean_HCT116) > sd_k_corr_perc_mean_HCT116) |
+      (abs(score_k_corr_perc_mean_RPE1) > hit_cutoff) & (abs(score_k_corr_perc_mean_RPE1) > sd_k_corr_perc_mean_RPE1) |
+      (abs(score_spots_number_mean_HCT116) > hit_cutoff) & (abs(score_spots_number_mean_HCT116) > sd_spots_number_mean_HCT116) |
+      (abs(score_spots_number_mean_RPE1) > hit_cutoff) & (abs(score_spots_number_mean_RPE1) > sd_spots_number_mean_RPE1)
   ) |>
   filter(score_cell_n_HCT116 > cell_n_cutoff | score_cell_n_RPE1 > -cell_n_cutoff) |>
   arrange(desc(score_k_corr_perc_mean_HCT116))
@@ -118,7 +118,8 @@ Now filter the all_tbl_wide table to include only the hits that are common to bo
 common_hits_tbl <- all_hits_tbl |>
   filter(
     ((abs(score_spots_number_mean_HCT116) > hit_cutoff) & (abs(score_spots_number_mean_RPE1) > hit_cutoff)) |
-    ((abs(score_k_corr_perc_mean_HCT116) > hit_cutoff) & (abs(score_k_corr_perc_mean_RPE1) > hit_cutoff))) |>
+      ((abs(score_k_corr_perc_mean_HCT116) > hit_cutoff) & (abs(score_k_corr_perc_mean_RPE1) > hit_cutoff))
+  ) |>
   arrange(desc(score_k_corr_perc_mean_HCT116))
 
 common_hits_tbl |> write_csv(here("output", "common_hits_tbl.csv"))
@@ -137,26 +138,81 @@ all_tbl_wide <- all_tbl_wide |>
 glimpse(all_tbl_wide)
 ```
 
-### Plotting 
+### Plotting Replicate1 vs. Replicate2
 
 ```{r}
-plot_cell_lines <- function(df, 
-                          x_variable, 
-                          y_variable, 
-                          plot_title = "") {
+plot_replicates <- function(df,
+                            x_variable,
+                            y_variable,
+                            plot_title = "") {
   df |>
-  filter(control == "sample") |>
-  mutate(
-    marker = ifelse(
-      common_hit,
-      gene_symbol,
-      ""
-    )
-  ) |>
+    filter(control != "killer") |>
     ggplot(
       aes(
-        x = {{x_variable}}, 
-        y = {{y_variable}},
+        x = {{ x_variable }},
+        y = {{ y_variable }},
+        color = control,
+      )
+    ) +
+    geom_point(shape = 21) +
+    geom_smooth(
+      method = "lm",
+      color = "grey50"
+    ) +
+    scale_color_tableau(name = "Treatment") +
+    facet_wrap(vars(cell_line)) +
+    xlab("Z-score Replicate 1") +
+    ylab("Z-score Replicate 2") +
+    ggtitle(plot_title)
+}
+```
+
+```{r}
+#| label: plot-replicates-spots-number
+#| fig.height: 8
+#| fig.width: 12
+
+all_tbl |>
+  plot_replicates(
+    x_variable = norm_repeat1_spots_number_mean,
+    y_variable = norm_repeat2_spots_number_mean,
+    plot_title = "Number of CENPC Spots per Cell"
+  )
+```
+
+```{r}
+#| label: plot-replicates-k-corr-perc
+#| fig.height: 8
+#| fig.width: 12
+
+all_tbl |>
+  plot_replicates(
+    x_variable = norm_repeat1_k_corr_perc_mean,
+    y_variable = norm_repeat2_k_corr_perc_mean,
+    plot_title = "CENPC Spots K Clustering Score"
+  )
+```
+
+### Plotting Cell Line vs. Cell Line
+
+```{r}
+plot_cell_lines <- function(df,
+                            x_variable,
+                            y_variable,
+                            plot_title = "") {
+  df |>
+    filter(control == "sample") |>
+    mutate(
+      marker = ifelse(
+        common_hit,
+        gene_symbol,
+        ""
+      )
+    ) |>
+    ggplot(
+      aes(
+        x = {{ x_variable }},
+        y = {{ y_variable }},
         color = control,
         label = marker
       )
@@ -166,7 +222,7 @@ plot_cell_lines <- function(df,
       max.overlaps = Inf,
       color = "black"
     ) +
-    geom_point(shape = 21) + 
+    geom_point(shape = 21) +
     geom_smooth(
       method = "lm",
       color = "grey50"
@@ -187,7 +243,7 @@ all_tbl_wide |>
   plot_cell_lines(
     x_variable = score_spots_number_mean_HCT116,
     y_variable = score_spots_number_mean_RPE1,
-    plot_title = "Number of CENPC Spots"
+    plot_title = "Number of CENPC Spots per Cell"
   )
 ```
 
@@ -200,7 +256,7 @@ all_tbl_wide |>
   plot_cell_lines(
     x_variable = score_k_corr_perc_mean_HCT116,
     y_variable = score_k_corr_perc_mean_RPE1,
-    plot_title = "Percentage of K Function above Poisson"
+    plot_title = "CENPC Spots K Clustering Score"
   )
 ```
 
