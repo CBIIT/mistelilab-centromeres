@@ -104,7 +104,7 @@ all_hits_tbl <- all_tbl_wide |>
       (abs(score_spots_number_mean_HCT116) > hit_cutoff) & (abs(score_spots_number_mean_HCT116) > sd_spots_number_mean_HCT116) |
       (abs(score_spots_number_mean_RPE1) > hit_cutoff) & (abs(score_spots_number_mean_RPE1) > sd_spots_number_mean_RPE1)
   ) |>
-  filter(score_cell_n_HCT116 > cell_n_cutoff | score_cell_n_RPE1 > -cell_n_cutoff) |>
+  filter(score_cell_n_HCT116 > -cell_n_cutoff | score_cell_n_RPE1 > -cell_n_cutoff) |>
   arrange(desc(score_k_corr_perc_mean_HCT116))
 
 all_hits_tbl |> write_csv(here("output", "all_hits_tbl.csv"))
@@ -117,8 +117,8 @@ Now filter the all_tbl_wide table to include only the hits that are common to bo
 ```{r}
 common_hits_tbl <- all_hits_tbl |>
   filter(
-    ((abs(score_spots_number_mean_HCT116) > hit_cutoff) & (abs(score_spots_number_mean_RPE1) > hit_cutoff)) |
-      ((abs(score_k_corr_perc_mean_HCT116) > hit_cutoff) & (abs(score_k_corr_perc_mean_RPE1) > hit_cutoff))
+    ((abs(score_spots_number_mean_HCT116) > hit_cutoff) | (abs(score_k_corr_perc_mean_HCT116) > hit_cutoff)) & 
+    ((abs(score_spots_number_mean_RPE1) > hit_cutoff) | (abs(score_k_corr_perc_mean_RPE1) > hit_cutoff))
   ) |>
   arrange(desc(score_k_corr_perc_mean_HCT116))
 
