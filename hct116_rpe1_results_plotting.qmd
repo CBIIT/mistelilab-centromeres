@@ -117,8 +117,8 @@ Now filter the all_tbl_wide table to include only the hits that are common to bo
 ```{r}
 common_hits_tbl <- all_hits_tbl |>
   filter(
-    ((abs(score_spots_number_mean_HCT116) > hit_cutoff) | (abs(score_k_corr_perc_mean_HCT116) > hit_cutoff)) & 
-    ((abs(score_spots_number_mean_RPE1) > hit_cutoff) | (abs(score_k_corr_perc_mean_RPE1) > hit_cutoff))
+    ((abs(score_spots_number_mean_HCT116) > hit_cutoff) | (abs(score_k_corr_perc_mean_HCT116) > hit_cutoff)) &
+      ((abs(score_spots_number_mean_RPE1) > hit_cutoff) | (abs(score_k_corr_perc_mean_RPE1) > hit_cutoff))
   ) |>
   arrange(desc(score_k_corr_perc_mean_HCT116))
 
@@ -127,15 +127,64 @@ common_hits_tbl |> write_csv(here("output", "common_hits_tbl.csv"))
 glimpse(common_hits_tbl)
 ```
 
-Add a column to the all_tbl_wide table to indicate if the sgRNA is a common hit.
+
+### Add Back Manual Annotations for Common Hits
+
+First read the common hits table that was annotated manually to indicate whether the sgRNA causes nuclear defects, what biological process is affected, and whether to add the label in the dot plot or not.
 
 ```{r}
-all_tbl_wide <- all_tbl_wide |>
-  mutate(
-    common_hit = gene_symbol %in% pull(common_hits_tbl, gene_symbol)
-  )
+common_hits_tbl_annotated <- read_csv(here("metadata", "common_hits_tbl_annotated.csv")) |>
+  select(plate:label)
 
-glimpse(all_tbl_wide)
+glimpse(common_hits_tbl_annotated)
+```
+
+Join the information in the `common_hits_tbl_annotated` table with the `all_tbl_wide` table.
+
+```{r}
+all_tbl_annotated <- all_tbl |>
+  left_join(common_hits_tbl_annotated, by = c("plate", "well", "control", "gene_symbol")) |>
+  relocate(nuclear_segmentation:label, .after = gene_symbol)
+
+glimpse(all_tbl_annotated)
+```
+
+```{r}
+cat_vec <- c(
+  "Non-hit",
+  "Other",
+  "Chromatin structure",
+  "Transcription",
+  "Replication",
+  "Nucleolus",
+  "Nuclear pore",
+  "Kinetochore"
+)
+
+all_tbl_wide_annotated <- all_tbl_annotated |>
+  pivot_wider(
+    names_from = cell_line,
+    values_from = score_area_mean:sd_spots_number_mean
+  ) |>
+  relocate(
+    c(
+      score_k_corr_perc_mean_HCT116,
+      score_k_corr_perc_mean_RPE1,
+      score_spots_number_mean_HCT116,
+      score_spots_number_mean_RPE1
+    ),
+    .after = gene_symbol
+  ) |>
+  mutate(
+    nuclear_segmentation = if_else(is.na(nuclear_segmentation), "other", nuclear_segmentation),
+    category = if_else(is.na(category), "Non-hit", category),
+    label = if_else(is.na(label), "no", label)
+  ) |>
+  mutate(category = factor(category, levels = cat_vec))
+
+all_tbl_wide_annotated |> write_csv(here("output", "all_sgrna_tbl_annotated.csv"))
+
+glimpse(all_tbl_wide_annotated)
 ```
 
 ### Plotting Replicate1 vs. Replicate2
@@ -172,7 +221,7 @@ plot_replicates <- function(df,
 #| fig.height: 8
 #| fig.width: 12
 
-all_tbl |>
+all_tbl_annotated |>
   plot_replicates(
     x_variable = norm_repeat1_spots_number_mean,
     y_variable = norm_repeat2_spots_number_mean,
@@ -185,7 +234,7 @@ all_tbl |>
 #| fig.height: 8
 #| fig.width: 12
 
-all_tbl |>
+all_tbl_annotated |>
   plot_replicates(
     x_variable = norm_repeat1_k_corr_perc_mean,
     y_variable = norm_repeat2_k_corr_perc_mean,
@@ -204,17 +253,23 @@ plot_cell_lines <- function(df,
     filter(control == "sample") |>
     mutate(
       marker = ifelse(
-        common_hit,
+        label == "yes",
         gene_symbol,
         ""
+      ),
+      alpha_dot = ifelse(
+        category == "Non-hit",
+        0.5,
+        1
       )
     ) |>
     ggplot(
       aes(
         x = {{ x_variable }},
         y = {{ y_variable }},
-        color = control,
-        label = marker
+        color = category,
+        label = marker,
+        alpha = alpha_dot
       )
     ) +
     geom_text_repel(
@@ -222,12 +277,13 @@ plot_cell_lines <- function(df,
       max.overlaps = Inf,
       color = "black"
     ) +
-    geom_point(shape = 21) +
+    geom_point() +
     geom_smooth(
       method = "lm",
       color = "grey50"
     ) +
-    scale_color_few(name = "Treatment") +
+    scale_color_few(name = "Category") +
+    guides(alpha = "none") +
     xlab("Z-score HCT116") +
     ylab("Z-score RPE1") +
     ggtitle(plot_title)
@@ -239,7 +295,7 @@ plot_cell_lines <- function(df,
 #| fig.height: 8
 #| fig.width: 12
 
-all_tbl_wide |>
+all_tbl_wide_annotated |>
   plot_cell_lines(
     x_variable = score_spots_number_mean_HCT116,
     y_variable = score_spots_number_mean_RPE1,
@@ -252,7 +308,7 @@ all_tbl_wide |>
 #| fig.height: 8
 #| fig.width: 12
 
-all_tbl_wide |>
+all_tbl_wide_annotated |>
   plot_cell_lines(
     x_variable = score_k_corr_perc_mean_HCT116,
     y_variable = score_k_corr_perc_mean_RPE1,
@@ -265,7 +321,7 @@ all_tbl_wide |>
 ```{r}
 #| label: statistics
 
-all_tbl_wide |>
+all_tbl_wide_annotated |>
   filter(control == "sample") |>
   summarise(
     corr_spots_n = cor(score_spots_number_mean_HCT116, score_spots_number_mean_RPE1, method = "pearson"),
