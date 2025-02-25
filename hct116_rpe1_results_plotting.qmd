@@ -167,6 +167,32 @@ n_hits_tbl_RPE1 |>
   nrow()
 ```
 
+Calculate the number of hits that are unique for HCT116 for either Ripley's K or the number of CENPC spots per cell.
+
+```{r}
+n_hits_tbl_hct116_unique <- n_hits_tbl |>
+  filter((score_k_corr_perc_mean_HCT116_pos | score_spots_number_mean_HCT116_pos) &
+    !(score_k_corr_perc_mean_RPE1_pos | score_spots_number_mean_RPE1_pos))
+
+n_hits_tbl_hct116_unique |> write_csv(here("output", "hct116_unique hits_tbl.csv"))
+
+n_hits_tbl_hct116_unique |>
+  nrow()
+```
+
+Calculate the number of hits that are unique for RPE1 for either Ripley's K or the number of CENPC spots per cell.
+
+```{r}
+n_hits_tbl_RPE1_unique <- n_hits_tbl |>
+  filter((score_k_corr_perc_mean_RPE1_pos |score_spots_number_mean_RPE1_pos) &
+    !(score_k_corr_perc_mean_HCT116_pos | score_spots_number_mean_HCT116_pos))
+
+n_hits_tbl_RPE1_unique |> write_csv(here("output", "RPE1_unique hits_tbl.csv"))
+
+n_hits_tbl_RPE1_unique |>
+  nrow()
+```
+
 Now filter the all_tbl_wide table to include only the hits that are common to both cell lines (i.e. they are a hit in both cell lines). Write the common hits to a csv file.
 
 ```{r}
