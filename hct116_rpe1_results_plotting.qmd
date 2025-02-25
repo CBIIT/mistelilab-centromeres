@@ -9,6 +9,7 @@ format:
       code-fold: true
       code-tools: true
       code-link: true
+      df-print: paged
 editor: source
 ---
 
@@ -64,7 +65,7 @@ glob_path <- "*_all_genes.csv"
 
 all_tbl <- read_hts2_results(here(), glob_path)
 
-glimpse(all_tbl)
+all_tbl
 ```
 
 Process the final results to generate a wide format table for plotting. Each row in the table corresponds to a unique plate/well combination. Each sgRNA treatment in the library corresponds to a unique plate/well combination. Positive and negative sgRNAcontrols are also included in the table but have multiple plate/well combinations. This wide table will also be used to generate the list of hits for either cell line.
@@ -87,7 +88,7 @@ all_tbl_wide <- all_tbl |>
 
 all_tbl_wide |> write_csv(here("output", "all_sgrna_tbl.csv"))
 
-glimpse(all_tbl_wide)
+all_tbl_wide
 ```
 
 Create a list of hits in either cell line. Positive and negative sgRNA controls are not in the list of hits. Hits are defined as sgRNAs that have a z-score greater than 2.5 or less than -2.5 for Ripley's K or for the spots number for either cell line. Also, make sure that for each z-score mean, its absolute value is larger than the respective standard deviation. Write the list of hits to a csv file.
@@ -99,17 +100,71 @@ cell_n_cutoff <- 2.5
 all_hits_tbl <- all_tbl_wide |>
   filter(control == "sample") |>
   filter(
-    (abs(score_k_corr_perc_mean_HCT116) > hit_cutoff) & (abs(score_k_corr_perc_mean_HCT116) > sd_k_corr_perc_mean_HCT116) |
-      (abs(score_k_corr_perc_mean_RPE1) > hit_cutoff) & (abs(score_k_corr_perc_mean_RPE1) > sd_k_corr_perc_mean_RPE1) |
-      (abs(score_spots_number_mean_HCT116) > hit_cutoff) & (abs(score_spots_number_mean_HCT116) > sd_spots_number_mean_HCT116) |
-      (abs(score_spots_number_mean_RPE1) > hit_cutoff) & (abs(score_spots_number_mean_RPE1) > sd_spots_number_mean_RPE1)
+    (abs(score_k_corr_perc_mean_HCT116) > hit_cutoff) &
+      (abs(score_k_corr_perc_mean_HCT116) > sd_k_corr_perc_mean_HCT116) |
+      (abs(score_k_corr_perc_mean_RPE1) > hit_cutoff) &
+        (abs(score_k_corr_perc_mean_RPE1) > sd_k_corr_perc_mean_RPE1) |
+      (abs(score_spots_number_mean_HCT116) > hit_cutoff) &
+        (abs(score_spots_number_mean_HCT116) > sd_spots_number_mean_HCT116) |
+      (abs(score_spots_number_mean_RPE1) > hit_cutoff) &
+        (abs(score_spots_number_mean_RPE1) > sd_spots_number_mean_RPE1)
   ) |>
-  filter(score_cell_n_HCT116 > -cell_n_cutoff | score_cell_n_RPE1 > -cell_n_cutoff) |>
+  filter(
+    score_cell_n_HCT116 > -cell_n_cutoff | score_cell_n_RPE1 > -cell_n_cutoff
+  ) |>
   arrange(desc(score_k_corr_perc_mean_HCT116))
 
 all_hits_tbl |> write_csv(here("output", "all_hits_tbl.csv"))
 
-glimpse(all_hits_tbl)
+all_hits_tbl
+```
+Create new indicator variables to show if a certain sgRNA is a hit or not for each cell line and for each parameter (i.e. Ripley's K or the number of CENPC spots per cell).
+
+```{r}
+#| label: hits-n-calculations
+
+n_hits_tbl <- all_hits_tbl |>
+  select(plate:score_cell_n_RPE1) |>
+  mutate(across(
+    score_k_corr_perc_mean_HCT116:score_spots_number_mean_RPE1,
+    list(pos = ~ abs(.x) > hit_cutoff)
+  ))
+
+n_hits_tbl
+```
+
+Let's calculate the number of positive hits for each cell line and for each parameter (i.e. Ripley's K or the number of CENPC spots per cell). Bear in mind that the number of hits in each category is not going to sum up to the total number of hits, because there is overlap between the categories all the categories of hits. 
+
+```{r}
+n_hits_tbl |>
+  summarise(across(
+    score_k_corr_perc_mean_HCT116_pos:score_spots_number_mean_RPE1_pos,
+    list(n = sum)
+  ))
+```
+
+Calculate the number of hits for HCT116 for either Ripley's K or the number of CENPC spots per cell.
+
+```{r}
+n_hits_tbl_hct116 <- n_hits_tbl |>
+  filter(score_k_corr_perc_mean_HCT116_pos | score_spots_number_mean_HCT116_pos)
+
+n_hits_tbl_hct116 |> write_csv(here("output", "hct116_hits_tbl.csv"))
+
+n_hits_tbl_hct116 |>
+  nrow()
+```
+
+Calculate the number of hits for RPE1 for either Ripley's K or the number of CENPC spots per cell.
+
+```{r}
+n_hits_tbl_RPE1 <- n_hits_tbl |>
+  filter(score_k_corr_perc_mean_RPE1_pos | score_spots_number_mean_RPE1_pos)
+
+n_hits_tbl_RPE1 |> write_csv(here("output", "RPE1_hits_tbl.csv"))
+
+n_hits_tbl_RPE1 |>
+  nrow()
 ```
 
 Now filter the all_tbl_wide table to include only the hits that are common to both cell lines (i.e. they are a hit in both cell lines). Write the common hits to a csv file.
@@ -117,14 +172,16 @@ Now filter the all_tbl_wide table to include only the hits that are common to bo
 ```{r}
 common_hits_tbl <- all_hits_tbl |>
   filter(
-    ((abs(score_spots_number_mean_HCT116) > hit_cutoff) | (abs(score_k_corr_perc_mean_HCT116) > hit_cutoff)) &
-      ((abs(score_spots_number_mean_RPE1) > hit_cutoff) | (abs(score_k_corr_perc_mean_RPE1) > hit_cutoff))
+    ((abs(score_spots_number_mean_HCT116) > hit_cutoff) |
+      (abs(score_k_corr_perc_mean_HCT116) > hit_cutoff)) &
+      ((abs(score_spots_number_mean_RPE1) > hit_cutoff) |
+        (abs(score_k_corr_perc_mean_RPE1) > hit_cutoff))
   ) |>
   arrange(desc(score_k_corr_perc_mean_HCT116))
 
 common_hits_tbl |> write_csv(here("output", "common_hits_tbl.csv"))
 
-glimpse(common_hits_tbl)
+common_hits_tbl
 ```
 
 
@@ -133,20 +190,26 @@ glimpse(common_hits_tbl)
 First read the common hits table that was annotated manually to indicate whether the sgRNA causes nuclear defects, what biological process is affected, and whether to add the label in the dot plot or not.
 
 ```{r}
-common_hits_tbl_annotated <- read_csv(here("metadata", "common_hits_tbl_annotated.csv")) |>
+common_hits_tbl_annotated <- read_csv(here(
+  "metadata",
+  "common_hits_tbl_annotated.csv"
+)) |>
   select(plate:label)
 
-glimpse(common_hits_tbl_annotated)
+common_hits_tbl_annotated
 ```
 
 Join the information in the `common_hits_tbl_annotated` table with the `all_tbl_wide` table.
 
 ```{r}
 all_tbl_annotated <- all_tbl |>
-  left_join(common_hits_tbl_annotated, by = c("plate", "well", "control", "gene_symbol")) |>
+  left_join(
+    common_hits_tbl_annotated,
+    by = c("plate", "well", "control", "gene_symbol")
+  ) |>
   relocate(nuclear_segmentation:label, .after = gene_symbol)
 
-glimpse(all_tbl_annotated)
+all_tbl_annotated
 ```
 
 ```{r}
@@ -176,24 +239,26 @@ all_tbl_wide_annotated <- all_tbl_annotated |>
     .after = gene_symbol
   ) |>
   mutate(
-    nuclear_segmentation = if_else(is.na(nuclear_segmentation), "other", nuclear_segmentation),
+    nuclear_segmentation = if_else(
+      is.na(nuclear_segmentation),
+      "other",
+      nuclear_segmentation
+    ),
     category = if_else(is.na(category), "Non-hit", category),
     label = if_else(is.na(label), "no", label)
   ) |>
   mutate(category = factor(category, levels = cat_vec))
 
-all_tbl_wide_annotated |> write_csv(here("output", "all_sgrna_tbl_annotated.csv"))
+all_tbl_wide_annotated |>
+  write_csv(here("output", "all_sgrna_tbl_annotated.csv"))
 
-glimpse(all_tbl_wide_annotated)
+all_tbl_wide_annotated
 ```
 
 ### Plotting Replicate1 vs. Replicate2
 
 ```{r}
-plot_replicates <- function(df,
-                            x_variable,
-                            y_variable,
-                            plot_title = "") {
+plot_replicates <- function(df, x_variable, y_variable, plot_title = "") {
   df |>
     filter(control != "killer") |>
     ggplot(
@@ -245,10 +310,7 @@ all_tbl_annotated |>
 ### Plotting Cell Line vs. Cell Line
 
 ```{r}
-plot_cell_lines <- function(df,
-                            x_variable,
-                            y_variable,
-                            plot_title = "") {
+plot_cell_lines <- function(df, x_variable, y_variable, plot_title = "") {
   df |>
     filter(control == "sample") |>
     mutate(
@@ -324,8 +386,16 @@ all_tbl_wide_annotated |>
 all_tbl_wide_annotated |>
   filter(control == "sample") |>
   summarise(
-    corr_spots_n = cor(score_spots_number_mean_HCT116, score_spots_number_mean_RPE1, method = "pearson"),
-    corr_k_corr_perc = cor(score_k_corr_perc_mean_HCT116, score_k_corr_perc_mean_RPE1, method = "pearson")
+    corr_spots_n = cor(
+      score_spots_number_mean_HCT116,
+      score_spots_number_mean_RPE1,
+      method = "pearson"
+    ),
+    corr_k_corr_perc = cor(
+      score_k_corr_perc_mean_HCT116,
+      score_k_corr_perc_mean_RPE1,
+      method = "pearson"
+    )
   )
 ```
 
