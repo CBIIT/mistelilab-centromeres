@@ -363,7 +363,6 @@ plot_cell_lines <- function(df, x_variable, y_variable, plot_title = "") {
     geom_text_repel(
       box.padding = 0.5,
       max.overlaps = Inf,
-      color = "black"
     ) +
     geom_point() +
     geom_smooth(
