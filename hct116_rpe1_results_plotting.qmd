@@ -15,6 +15,8 @@ editor: source
 
 ### Analysis setup
 
+Load libraries
+
 ```{r}
 #| label: load-packages
 #| include: false
@@ -25,6 +27,19 @@ library(ggthemes)
 library(ggrepel)
 library(ggforce)
 library(fs)
+```
+
+Set the working directory to the location of the script using the `here` package.
+
+```{r}
+here::i_am("hct116_rpe1_results_plotting.qmd")
+```
+
+Load `here` and utilitiy functions to make the code more portable.
+
+```{r}
+library(here)
+source(here("funcs", "utilities.R"))
 ```
 
 ```{r}
@@ -42,26 +57,11 @@ theme_update(
 )
 ```
 
-```{r}
-here::i_am("hct116_rpe1_results_plotting.qmd")
-```
-
 ### Read and process the final results from the screen cellHTS2 analysis
 
 Read the final results from the CRISPR-KO screen cellHTS2 analysis for both the HCT116-Cas9 and RPE1-Cas9 cell lines.
 
 ```{r}
-library(here)
-
-read_hts2_results <- function(path, glob) {
-  dir_ls(
-    path = path,
-    recurse = T,
-    glob = glob
-  ) |>
-    map_df(read_csv)
-}
-
 glob_path <- "*_all_genes.csv"
 
 all_tbl <- read_hts2_results(here(), glob_path)
@@ -381,27 +381,6 @@ common_hits_sankey |>
 Generate bar plots to show the magnitude of the effect of sgRNAs treatments across different categories.
 
 ```{r}
-plot_bars <- function(df, x_variable, plot_title = "") {
-  df |>
-    filter(category != "Non-hit" & nuclear_segmentation == "correct") |>
-    ggplot(aes(
-      x = {{ x_variable }},
-      y = gene_symbol,
-      fill = category
-    )) +
-    geom_bar(stat = "identity") +
-    scale_fill_discrete(name = "Category") +
-    theme(legend.position = "none") +
-    scale_y_discrete(limits = rev) +
-    labs(
-      x = "Z-Score",
-      y = "Gene Symbol",
-      title = plot_title
-    )
-}
-```
-
-```{r}
 #| label: spot-n-bar-hct116
 #| fig-width: 6
 #| fig-height: 24
@@ -454,30 +433,6 @@ all_tbl_wide_annotated |>
 Plot Z-scores from replicate 1 vs. replicate 2 for each cell line.
 
 ```{r}
-plot_replicates <- function(df, x_variable, y_variable, plot_title = "") {
-  df |>
-    filter(control != "killer") |>
-    ggplot(
-      aes(
-        x = {{ x_variable }},
-        y = {{ y_variable }},
-        color = control,
-      )
-    ) +
-    geom_point(shape = 21) +
-    geom_smooth(
-      method = "lm",
-      color = "grey50"
-    ) +
-    scale_color_discrete(name = "Treatment") +
-    facet_wrap(vars(cell_line)) +
-    xlab("Z-score Replicate 1") +
-    ylab("Z-score Replicate 2") +
-    ggtitle(plot_title)
-}
-```
-
-```{r}
 #| label: plot-replicates-spots-number
 #| fig.height: 8
 #| fig.width: 12
@@ -506,73 +461,6 @@ all_tbl_annotated |>
 ### Plot Cell Line vs. Cell Line
 
 Compare the effect of sgRNAs treatments on the number of CENPC spots per cell and the clustering score of the spots in the nucleus between the two cell lines.
-
-```{r}
-plot_points <- function(
-    df,
-    x_variable,
-    y_variable,
-    x_lab,
-    y_lab,
-    plot_title = "",
-    axis_title_rel = 1.5,
-    axis_text_rel = 1.5,
-    title_rel = 1.5) {
-  custom_palette <- c(
-    "Non-hit" = "black",
-    "Other" = "#E26A62",
-    "Transcription" = "#63A832",
-    "Chromatin structure" = "#AE8B2E",
-    "Replication" = "#56B488",
-    "Nucleolus" = "#4EA5D4",
-    "Nuclear pore" = "#8F73F7",
-    "Kinetochore" = "#E459CB"
-  )
-
-  df |>
-    filter(control == "sample") |>
-    mutate(
-      marker = ifelse(
-        label == "yes",
-        gene_symbol,
-        ""
-      ),
-      alpha_dot = ifelse(
-        category == "Non-hit",
-        0.5,
-        1
-      )
-    ) |>
-    ggplot(
-      aes(
-        x = {{ x_variable }},
-        y = {{ y_variable }},
-        color = category,
-        label = marker,
-        alpha = alpha_dot
-      )
-    ) +
-    geom_text_repel(
-      box.padding = 0.5,
-      max.overlaps = Inf,
-    ) +
-    geom_point() +
-    geom_smooth(
-      method = "lm",
-      color = "grey50"
-    ) +
-    scale_color_manual(values = custom_palette) +
-    theme(
-      legend.position = "none",
-      axis.title = element_text(size = rel(axis_title_rel)),
-      axis.text = element_text(size = rel(axis_text_rel)),
-      plot.title = element_text(size = rel(title_rel))
-    ) +
-    xlab(x_lab) +
-    ylab(y_lab) +
-    ggtitle(plot_title)
-}
-```
 
 ```{r}
 #| label: spots-n-k-corr-perc-hct116
@@ -663,4 +551,3 @@ Document the information about the analysis session
 
 sessionInfo()
 ```
-
