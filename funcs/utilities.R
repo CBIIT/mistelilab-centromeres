@@ -1,3 +1,12 @@
+#' Read HTS2 results from a directory
+#'
+#' This function reads CSV files matching the provided glob pattern from the
+#' specified directory and its subdirectories, and returns a data frame
+#' containing the combined results.
+#'
+#' @param path The directory path to search for CSV files.
+#' @param glob A glob pattern to match the CSV file names.
+#' @return A data frame containing the combined HTS2 results.
 read_hts2_results <- function(path, glob) {
   dir_ls(
     path = path,
@@ -7,6 +16,15 @@ read_hts2_results <- function(path, glob) {
     map_df(read_csv)
 }
 
+#' Plot bar chart of gene data
+#'
+#' Creates a bar plot for genes, excluding "Non-hit" category and showing only sgRNAs
+#' that have correct nuclear segmentation.
+#'
+#' @param df Data frame containing the gene data.
+#' @param x_variable The variable to plot on the x-axis.
+#' @param plot_title Optional title for the plot (default: "").
+#' @return A ggplot object with the bar chart.
 plot_bars <- function(df, x_variable, plot_title = "") {
   df |>
     filter(category != "Non-hit" & nuclear_segmentation == "correct") |>
@@ -26,6 +44,16 @@ plot_bars <- function(df, x_variable, plot_title = "") {
     )
 }
 
+#' Plot replicates comparison
+#'
+#' Creates a scatter plot comparing replicates with a linear regression line,
+#' excluding "killer" control sgRNA.
+#'
+#' @param df Data frame containing the replicate data.
+#' @param x_variable The variable for replicate 1 (x-axis).
+#' @param y_variable The variable for replicate 2 (y-axis).
+#' @param plot_title Optional title for the plot (default: "").
+#' @return A ggplot object comparing replicates.
 plot_replicates <- function(df, x_variable, y_variable, plot_title = "") {
   df |>
     filter(control != "killer") |>
@@ -48,6 +76,21 @@ plot_replicates <- function(df, x_variable, y_variable, plot_title = "") {
     ggtitle(plot_title)
 }
 
+#' Create scatter plot with categorical coloring
+#'
+#' Creates a detailed scatter plot with custom color palette for different categories,
+#' labeled points, and a linear regression line.
+#'
+#' @param df Data frame containing the point data.
+#' @param x_variable The variable for the x-axis.
+#' @param y_variable The variable for the y-axis.
+#' @param x_lab Label for the x-axis.
+#' @param y_lab Label for the y-axis.
+#' @param plot_title Optional title for the plot (default: "").
+#' @param axis_title_rel Relative size of axis titles (default: 1.5).
+#' @param axis_text_rel Relative size of axis text (default: 1.5).
+#' @param title_rel Relative size of plot title (default: 1.5).
+#' @return A ggplot object with the scatter plot.
 plot_points <- function(
   df,
   x_variable,
