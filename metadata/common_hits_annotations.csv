@@ -1,0 +1,61 @@
+plate,well,control,gene_symbol,nuclear_segmentation,category,label
+3,B10,sample,LMNA,correct,Chromatin structure,yes
+3,M09,sample,NCAPD3,correct,Chromatin structure,yes
+4,J17,sample,NCAPH2,correct,Chromatin structure,yes
+3,I02,sample,RAD21,correct,Chromatin structure,yes
+3,O10,sample,WAPL,correct,Chromatin structure,yes
+2,I21,sample,CENPC,correct,Kinetochore,yes
+2,M13,sample,CENPW,correct,Kinetochore,yes
+4,J07,sample,CKAP5,correct,Kinetochore,yes
+4,C10,sample,NDC80,correct,Kinetochore,yes
+4,J10,sample,NUF2,correct,Kinetochore,yes
+4,J15,sample,SENP6,correct,Kinetochore,yes
+4,I13,sample,SPC24,correct,Kinetochore,yes
+4,J13,sample,SPC25,correct,Kinetochore,yes
+4,K13,sample,SPDL1,correct,Kinetochore,yes
+2,O11,sample,NUP160,correct,Nuclear pore,yes
+2,O13,sample,NUP85,correct,Nuclear pore,yes
+1,I07,sample,DDX21,correct,Nucleolus,yes
+1,B08,sample,FBL,correct,Nucleolus,yes
+4,M19,sample,MKI67,correct,Nucleolus,yes
+1,I10,sample,NPM1,correct,Nucleolus,yes
+2,F08,sample,CHAF1A,correct,Replication,yes
+2,I18,sample,CHAF1B,correct,Replication,yes
+4,B10,sample,MTBP,correct,Replication,yes
+2,B03,sample,PCNA,correct,Replication,yes
+1,J02,sample,POLE,correct,Replication,yes
+1,G05,sample,RAD51,correct,Replication,yes
+3,K14,sample,RPA2,correct,Replication,yes
+3,C10,sample,TICRR,correct,Replication,yes
+1,J16,sample,TOP2A,correct,Replication,yes
+2,C10,sample,HNRNPC,correct,Transcription,yes
+1,I08,sample,POLR1B,correct,Transcription,yes
+2,E18,sample,SUPT5H,correct,Transcription,yes
+2,C07,sample,ZNRD1,correct,Transcription,yes
+2,I13,sample,CDCA5,correct,Chromatin structure,no
+4,F18,sample,PTTG1,correct,Chromatin structure,no
+4,B18,sample,SMC4,correct,Chromatin structure,no
+4,L19,sample,NCL,correct,Nucleolus,no
+1,E11,sample,AURKA,incorrect,Other,no
+2,I08,sample,AURKB,incorrect,Other,no
+4,K06,sample,BIRC5,incorrect,Other,no
+4,B07,sample,BUB1B,incorrect,Other,no
+4,M16,sample,CCNB1,incorrect,Other,no
+4,D07,sample,CDCA8,incorrect,Other,no
+1,O09,sample,CDK1,correct,Other,no
+1,L06,sample,INCENP,incorrect,Other,no
+2,K16,sample,KANSL1,correct,Other,no
+3,L10,sample,KMT5A,correct,Other,no
+4,L10,sample,PAFAH1B1,correct,Other,no
+4,G11,sample,PPP2R1A,correct,Other,no
+3,L14,sample,RAN,correct,Other,no
+3,O03,sample,RSF1,correct,Other,no
+2,C16,sample,SF3B1,correct,Other,no
+2,O06,sample,UHRF1,correct,Other,no
+4,E07,sample,CDT1,correct,Replication,no
+1,C20,sample,CHEK1,correct,Replication,no
+2,L14,sample,POLR2A,correct,Transcription,no
+2,F15,sample,RTF1,correct,Transcription,no
+1,G18,sample,TWISTNB,correct,Transcription,no
+3,C12,sample,UBTF,correct,Transcription,no
+1,G21,sample,WDR5,correct,Transcription,no

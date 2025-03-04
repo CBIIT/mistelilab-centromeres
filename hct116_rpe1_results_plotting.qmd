@@ -23,6 +23,7 @@ editor: source
 library(tidyverse)
 library(ggthemes)
 library(ggrepel)
+library(ggforce)
 library(fs)
 ```
 
@@ -118,6 +119,7 @@ all_hits_tbl |> write_csv(here("output", "all_hits_tbl.csv"))
 
 all_hits_tbl
 ```
+
 Create new indicator variables to show if a certain sgRNA is a hit or not for each cell line and for each parameter (i.e. Ripley's K or the number of CENPC spots per cell).
 
 ```{r}
@@ -171,10 +173,13 @@ Calculate the number of hits that are unique for HCT116 for either Ripley's K or
 
 ```{r}
 n_hits_tbl_hct116_unique <- n_hits_tbl |>
-  filter((score_k_corr_perc_mean_HCT116_pos | score_spots_number_mean_HCT116_pos) &
-    !(score_k_corr_perc_mean_RPE1_pos | score_spots_number_mean_RPE1_pos))
+  filter(
+    (score_k_corr_perc_mean_HCT116_pos | score_spots_number_mean_HCT116_pos) &
+      !(score_k_corr_perc_mean_RPE1_pos | score_spots_number_mean_RPE1_pos)
+  )
 
-n_hits_tbl_hct116_unique |> write_csv(here("output", "hct116_unique hits_tbl.csv"))
+n_hits_tbl_hct116_unique |>
+  write_csv(here("output", "hct116_unique hits_tbl.csv"))
 
 n_hits_tbl_hct116_unique |>
   nrow()
@@ -184,8 +189,10 @@ Calculate the number of hits that are unique for RPE1 for either Ripley's K or t
 
 ```{r}
 n_hits_tbl_RPE1_unique <- n_hits_tbl |>
-  filter((score_k_corr_perc_mean_RPE1_pos |score_spots_number_mean_RPE1_pos) &
-    !(score_k_corr_perc_mean_HCT116_pos | score_spots_number_mean_HCT116_pos))
+  filter(
+    (score_k_corr_perc_mean_RPE1_pos | score_spots_number_mean_RPE1_pos) &
+      !(score_k_corr_perc_mean_HCT116_pos | score_spots_number_mean_HCT116_pos)
+  )
 
 n_hits_tbl_RPE1_unique |> write_csv(here("output", "RPE1_unique hits_tbl.csv"))
 
@@ -216,13 +223,12 @@ common_hits_tbl
 First read the common hits table that was annotated manually to indicate whether the sgRNA causes nuclear defects, what biological process is affected, and whether to add the label in the dot plot or not.
 
 ```{r}
-common_hits_tbl_annotated <- read_csv(here(
+common_hits_annotations <- read_csv(here(
   "metadata",
-  "common_hits_tbl_annotated.csv"
-)) |>
-  select(plate:label)
+  "common_hits_annotations.csv"
+))
 
-common_hits_tbl_annotated
+common_hits_annotations
 ```
 
 Join the information in the `common_hits_tbl_annotated` table with the `all_tbl_wide` table.
@@ -230,13 +236,15 @@ Join the information in the `common_hits_tbl_annotated` table with the `all_tbl_
 ```{r}
 all_tbl_annotated <- all_tbl |>
   left_join(
-    common_hits_tbl_annotated,
+    common_hits_annotations,
     by = c("plate", "well", "control", "gene_symbol")
   ) |>
   relocate(nuclear_segmentation:label, .after = gene_symbol)
 
 all_tbl_annotated
 ```
+
+Pivot wider the table containing all the screen results and annotations to generate a wide format table for plotting. This is similar to the `all_tbl_wide` table, but it contains the annotations as well. In addition, add new indicator variables to show if a certain sgRNA is a hit or not for each cell line and for each parameter (i.e. Ripley's K or the number of CENPC spots per cell).
 
 ```{r}
 cat_vec <- c(
@@ -273,7 +281,43 @@ all_tbl_wide_annotated <- all_tbl_annotated |>
     category = if_else(is.na(category), "Non-hit", category),
     label = if_else(is.na(label), "no", label)
   ) |>
-  mutate(category = factor(category, levels = cat_vec))
+  mutate(category = factor(category, levels = cat_vec)) |>
+  mutate(
+    score_spots_number_direction = if_else(
+      score_spots_number_mean_HCT116 * score_spots_number_mean_RPE1 >= 0,
+      "Same",
+      "Opposite"
+    ),
+    score_k_corr_perc_direction = if_else(
+      score_k_corr_perc_mean_HCT116 * score_k_corr_perc_mean_RPE1 >= 0,
+      "Same",
+      "Opposite"
+    ),
+    spot_n_direction_HCT116 = if_else(
+      score_spots_number_mean_HCT116 >= 0,
+      "Higher",
+      "Lower"
+    ),
+    spot_n_direction_RPE1 = if_else(
+      score_spots_number_mean_RPE1 >= 0,
+      "Higher",
+      "Lower"
+    ),
+    clustering_HCT116 = if_else(
+      score_k_corr_perc_mean_HCT116 >= 0,
+      "Clustering",
+      "Unclustering"
+    ),
+    clustering_RPE1 = if_else(
+      score_k_corr_perc_mean_RPE1 >= 0,
+      "Clustering",
+      "Unclustering"
+    )
+  ) |>
+  relocate(
+    c(nuclear_segmentation:label, score_spots_number_direction:clustering_RPE1),
+    .after = gene_symbol
+  )
 
 all_tbl_wide_annotated |>
   write_csv(here("output", "all_sgrna_tbl_annotated.csv"))
@@ -281,7 +325,133 @@ all_tbl_wide_annotated |>
 all_tbl_wide_annotated
 ```
 
-### Plotting Replicate1 vs. Replicate2
+### Sankey Plot
+
+Reformat the `all_tbl_wide_annotated` table to be used in the Sankey plot.
+
+```{r}
+common_hits_sankey <- all_tbl_wide_annotated |>
+  filter(category != "Non-hit" & nuclear_segmentation == "correct") |>
+  select(
+    `Gene Symbol` = gene_symbol,
+    `Clustering HCT116` = clustering_HCT116,
+    `Clustering RPE1` = clustering_RPE1,
+    `Spot Number HCT116` = spot_n_direction_HCT116,
+    `Spot Number RPE1` = spot_n_direction_RPE1,
+    `Direction Spot Number` = score_spots_number_direction,
+    `Direction K Clustering` = score_k_corr_perc_direction,
+    Category = category
+  ) |>
+  mutate(count = 1)
+
+common_hits_sankey
+```
+
+Generate a Sankey plot using the `common_hits_sankey` table to indicate how different sgRNA categories are related to each other.
+
+```{r}
+#| label: sankey-plot
+#| fig-width: 20
+#| fig-height: 12
+
+common_hits_sankey |>
+  gather_set_data(1:8) |>
+  mutate(x = factor(x, labels = names(common_hits_sankey)[1:8])) |>
+  ggplot(aes(x, id = id, split = y, value = count)) +
+  geom_parallel_sets(
+    aes(color = Category, fill = Category, alpha = 0.4),
+    axis.width = 0.1,
+    show.legend = FALSE
+  ) +
+  geom_parallel_sets_axes(axis.width = 0.1) +
+  geom_parallel_sets_labels(
+    angle = 0,
+    nudge_x = -0.1,
+    hjust = 0.95,
+    size = 5
+  ) +
+  theme_few() +
+  theme(
+    axis.text = element_text(size = 25, angle = 45, vjust = 0.2, hjust = 0.95)
+  )
+```
+
+### Bar Plots
+
+Generate bar plots to show the magnitude of the effect of sgRNAs treatments across different categories.
+
+```{r}
+plot_bars <- function(df, x_variable, plot_title = "") {
+  df |>
+    filter(category != "Non-hit" & nuclear_segmentation == "correct") |>
+    ggplot(aes(
+      x = {{ x_variable }},
+      y = gene_symbol,
+      fill = category
+    )) +
+    geom_bar(stat = "identity") +
+    scale_fill_discrete(name = "Category") +
+    theme(legend.position = "none") +
+    scale_y_discrete(limits = rev) +
+    labs(
+      x = "Z-Score",
+      y = "Gene Symbol",
+      title = plot_title
+    )
+}
+```
+
+```{r}
+#| label: spot-n-bar-hct116
+#| fig-width: 6
+#| fig-height: 24
+
+all_tbl_wide_annotated |>
+  plot_bars(
+    x_variable = score_spots_number_mean_HCT116,
+    plot_title = "Number of Spots per Cell HCT116"
+  )
+```
+
+```{r}
+#| label: spot-n-bar-rpe1
+#| fig-width: 6
+#| fig-height: 24
+
+all_tbl_wide_annotated |>
+  plot_bars(
+    x_variable = score_spots_number_mean_RPE1,
+    plot_title = "Number of Spots per Cell RPE1"
+  )
+```
+
+```{r}
+#| label: k-corr-perc-bar-hct116
+#| fig-width: 6
+#| fig-height: 24
+
+all_tbl_wide_annotated |>
+  plot_bars(
+    x_variable = score_k_corr_perc_mean_HCT116,
+    plot_title = "Spots Clustering Z-Score HCT116"
+  )
+```
+
+```{r}
+#| label: k-corr-perc-bar-rpe1
+#| fig-width: 6
+#| fig-height: 24
+
+all_tbl_wide_annotated |>
+  plot_bars(
+    x_variable = score_k_corr_perc_mean_RPE1,
+    plot_title = "Spots Clustering Z-Score RPE1"
+  )
+```
+
+### Plot Replicate1 vs. Replicate2
+
+Plot Z-scores from replicate 1 vs. replicate 2 for each cell line.
 
 ```{r}
 plot_replicates <- function(df, x_variable, y_variable, plot_title = "") {
@@ -299,7 +469,7 @@ plot_replicates <- function(df, x_variable, y_variable, plot_title = "") {
       method = "lm",
       color = "grey50"
     ) +
-    scale_color_tableau(name = "Treatment") +
+    scale_color_discrete(name = "Treatment") +
     facet_wrap(vars(cell_line)) +
     xlab("Z-score Replicate 1") +
     ylab("Z-score Replicate 2") +
@@ -316,7 +486,7 @@ all_tbl_annotated |>
   plot_replicates(
     x_variable = norm_repeat1_spots_number_mean,
     y_variable = norm_repeat2_spots_number_mean,
-    plot_title = "Number of CENPC Spots per Cell"
+    plot_title = "Number of Spots per Cell"
   )
 ```
 
@@ -329,14 +499,36 @@ all_tbl_annotated |>
   plot_replicates(
     x_variable = norm_repeat1_k_corr_perc_mean,
     y_variable = norm_repeat2_k_corr_perc_mean,
-    plot_title = "CENPC Spots K Clustering Score"
+    plot_title = "Spots K Clustering Score"
   )
 ```
 
-### Plotting Cell Line vs. Cell Line
+### Plot Cell Line vs. Cell Line
+
+Compare the effect of sgRNAs treatments on the number of CENPC spots per cell and the clustering score of the spots in the nucleus between the two cell lines.
 
 ```{r}
-plot_cell_lines <- function(df, x_variable, y_variable, plot_title = "") {
+plot_points <- function(
+    df,
+    x_variable,
+    y_variable,
+    x_lab,
+    y_lab,
+    plot_title = "",
+    axis_title_rel = 1.5,
+    axis_text_rel = 1.5,
+    title_rel = 1.5) {
+  custom_palette <- c(
+    "Non-hit" = "black",
+    "Other" = "#E26A62",
+    "Transcription" = "#63A832",
+    "Chromatin structure" = "#AE8B2E",
+    "Replication" = "#56B488",
+    "Nucleolus" = "#4EA5D4",
+    "Nuclear pore" = "#8F73F7",
+    "Kinetochore" = "#E459CB"
+  )
+
   df |>
     filter(control == "sample") |>
     mutate(
@@ -369,41 +561,80 @@ plot_cell_lines <- function(df, x_variable, y_variable, plot_title = "") {
       method = "lm",
       color = "grey50"
     ) +
-    scale_color_few(name = "Category") +
-    guides(alpha = "none") +
-    xlab("Z-score HCT116") +
-    ylab("Z-score RPE1") +
+    scale_color_manual(values = custom_palette) +
+    theme(
+      legend.position = "none",
+      axis.title = element_text(size = rel(axis_title_rel)),
+      axis.text = element_text(size = rel(axis_text_rel)),
+      plot.title = element_text(size = rel(title_rel))
+    ) +
+    xlab(x_lab) +
+    ylab(y_lab) +
     ggtitle(plot_title)
 }
 ```
 
 ```{r}
-#| label: spots-n-hct116-rpe1
-#| fig.height: 8
-#| fig.width: 12
+#| label: spots-n-k-corr-perc-hct116
+#| fig-width: 10
+#| fig-height: 10
 
 all_tbl_wide_annotated |>
-  plot_cell_lines(
+  plot_points(
+    x_variable = score_k_corr_perc_mean_HCT116,
+    y_variable = score_spots_number_mean_HCT116,
+    x_lab = "Z-Score Spots Clustering",
+    y_lab = "Z-Score Number of Spots per Cell",
+    plot_title = "HCT116"
+  )
+```
+
+```{r}
+#| label: spots-n-k-corr-perc-rpe1
+#| fig-width: 10
+#| fig-height: 10
+
+all_tbl_wide_annotated |>
+  plot_points(
+    x_variable = score_k_corr_perc_mean_RPE1,
+    y_variable = score_spots_number_mean_RPE1,
+    x_lab = "Z-Score Spots Clustering",
+    y_lab = "Z-Score Number of Spots per Cell",
+    plot_title = "RPE1"
+  )
+```
+
+```{r}
+#| label: spots-n-hct116-rpe1
+#| fig-width: 10
+#| fig-height: 10
+
+all_tbl_wide_annotated |>
+  plot_points(
     x_variable = score_spots_number_mean_HCT116,
     y_variable = score_spots_number_mean_RPE1,
-    plot_title = "Number of CENPC Spots per Cell"
+    x_lab = "Z-Score HCT116",
+    y_lab = "Z-Score RPE1",
+    plot_title = "Number of Spots per Cell"
   )
 ```
 
 ```{r}
 #| label: k-corr-perc-hct116-rpe1
-#| fig.height: 8
-#| fig.width: 12
+#| fig-width: 10
+#| fig-height: 10
 
 all_tbl_wide_annotated |>
-  plot_cell_lines(
+  plot_points(
     x_variable = score_k_corr_perc_mean_HCT116,
     y_variable = score_k_corr_perc_mean_RPE1,
-    plot_title = "CENPC Spots K Clustering Score"
+    x_lab = "Z-Score HCT116",
+    y_lab = "Z-Score RPE1",
+    plot_title = "Spots Clustering"
   )
 ```
 
-# Statistics
+### Statistics
 
 ```{r}
 #| label: statistics
@@ -432,3 +663,4 @@ Document the information about the analysis session
 
 sessionInfo()
 ```
+
