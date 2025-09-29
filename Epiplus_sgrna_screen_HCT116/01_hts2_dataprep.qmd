@@ -55,7 +55,11 @@ OUT_DIR <- here("Epiplus_sgrna_screen_HCT116", "hts2_output")
 
 OBJECT_DIR <- here("Epiplus_sgrna_screen_HCT116", "hitips_input")
 
-SYNTHEGO_DIR <- here("Epiplus_sgrna_screen_HCT116", "reformat_metadata", "Synthego")
+SYNTHEGO_DIR <- here(
+  "Epiplus_sgrna_screen_HCT116",
+  "reformat_metadata",
+  "Synthego"
+)
 
 RANDOMIZATION_DIR <- here(
   "Epiplus_sgrna_screen_HCT116",
@@ -222,9 +226,17 @@ layout_tbl <- read_csv(
   left_join(gene_tbl, by = c("synthego_barcode", "mother_well")) |>
   right_join(daughter_to_imaging, by = c("daughter_barcode")) |>
   select(
-    file_name, synthego_barcode, mother_barcode, source_barcode,
-    mother_well, daughter_barcode, dest_barcode, plate, imaging_barcode,
-    imaging_well, gene_symbol
+    file_name,
+    synthego_barcode,
+    mother_barcode,
+    source_barcode,
+    mother_well,
+    daughter_barcode,
+    dest_barcode,
+    plate,
+    imaging_barcode,
+    imaging_well,
+    gene_symbol
   )
 
 write_tsv(layout_tbl, file = fs::path(CACHE_DIR, "plates_layout.txt"))
@@ -237,26 +249,33 @@ Read the cell-level HiTIPS data from the text files. The object level data must 
 ```{r}
 #| label: read-cells
 
-cell_tbl <- dir_info(OBJECT_DIR,
-  recurse = T,
-  glob = GLOB_C
-) |>
+cell_tbl <- dir_info(OBJECT_DIR, recurse = T, glob = GLOB_C) |>
   filter(size > "1K") |>
   rowwise() |>
   summarise(fread(path)) |>
   select(
     file_name = Experiment,
     plate_index = plate_ID,
-    column, row, field_index, time_point, cell_index,
-    area, solidity,
+    column,
+    row,
+    field_index,
+    time_point,
+    cell_index,
+    area,
+    solidity,
     k_corr_perc = clustering_percentage_r_correction,
     radial_dist_mean = mean_radial_distance,
     spots_number
   ) |>
   mutate(well_index = paste0(LETTERS[row], column)) |>
   arrange(
-    file_name, plate_index, column, row, field_index,
-    time_point, cell_index
+    file_name,
+    plate_index,
+    column,
+    row,
+    field_index,
+    time_point,
+    cell_index
   ) |>
   filter(
     area >= 30,
@@ -281,8 +300,10 @@ Summarize the cell-level data into well-level data.
 
 well_tbl_partial <- cell_tbl |>
   group_by(
-    plate_index, well_index,
-    row, column
+    plate_index,
+    well_index,
+    row,
+    column
   ) |>
   summarise(
     cell_n = n(),
@@ -293,8 +314,11 @@ well_tbl_partial <- cell_tbl |>
   ) |>
   ungroup() |>
   select(
-    plate_index, row, column,
-    well_index, cell_n:spots_number_mean
+    plate_index,
+    row,
+    column,
+    well_index,
+    cell_n:spots_number_mean
   ) |>
   arrange(
     plate_index,
@@ -311,15 +335,17 @@ glimpse(well_tbl_partial)
 
 horiz_pad <- well_tbl_partial |>
   group_by(plate_index) |>
-  group_modify(~ tibble(
-    row = rep(c(1L, 16L), 24),
-    column = rep(1:24, each = 2),
-    well_index = paste0(LETTERS[row], column),
-    cell_n = NA,
-    k_corr_perc_mean = NA,
-    radial_dist_mean_mean = NA,
-    spots_number_mean = NA
-  )) |>
+  group_modify(
+    ~ tibble(
+      row = rep(c(1L, 16L), 24),
+      column = rep(1:24, each = 2),
+      well_index = paste0(LETTERS[row], column),
+      cell_n = NA,
+      k_corr_perc_mean = NA,
+      radial_dist_mean_mean = NA,
+      spots_number_mean = NA
+    )
+  ) |>
   ungroup()
 
 
@@ -331,15 +357,17 @@ glimpse(horiz_pad)
 
 vert_pad <- well_tbl_partial |>
   group_by(plate_index) |>
-  group_modify(~ tibble(
-    row = rep(2:15, 2),
-    column = rep(c(1, 24), each = 14),
-    well_index = paste0(LETTERS[row], column),
-    cell_n = NA,
-    k_corr_perc_mean = NA,
-    radial_dist_mean_mean = NA,
-    spots_number_mean = NA
-  )) |>
+  group_modify(
+    ~ tibble(
+      row = rep(2:15, 2),
+      column = rep(c(1, 24), each = 14),
+      well_index = paste0(LETTERS[row], column),
+      cell_n = NA,
+      k_corr_perc_mean = NA,
+      radial_dist_mean_mean = NA,
+      spots_number_mean = NA
+    )
+  ) |>
   ungroup()
 
 glimpse(vert_pad)
@@ -401,9 +429,7 @@ annotation_tbl <- layout_tbl |>
 
 glimpse(annotation_tbl)
 
-write_tsv(annotation_tbl,
-  file = fs::path(METADATA_DIR, "Annotation.txt")
-)
+write_tsv(annotation_tbl, file = fs::path(METADATA_DIR, "Annotation.txt"))
 ```
 
 ### `Plate Configuration`
@@ -424,13 +450,13 @@ odd_rows <- paste(LETTERS[seq(3, 15, by = 2)], collapse = ",")
 even_rows <- paste(LETTERS[seq(2, 14, by = 2)], collapse = ",")
 
 line5 <-
-  paste0("*\t[", odd_rows, "]22\tneg") # sgScramble  in Column 23 odd rows (C, ..., O)
+  paste0("*\t[", odd_rows, "]22\tneg") # sgScramble  in Column 22 odd rows (C, ..., O)
 line6 <-
-  paste0("*\t[", even_rows, "]22\tneg2") #  sgOR10A5  in Column 23 even rows (B, D, ..., N)
+  paste0("*\t[", even_rows, "]22\tneg2") #  sgOR10A5  in Column 22 even rows (B, D, ..., N)
 line7 <-
-  paste0("*\t[", odd_rows, "]23\tkiller") #  sgPLK1 in Column 24 odd rows (C, ..., O)
+  paste0("*\t[", odd_rows, "]23\tkiller") #  sgPLK1 in Column 23 odd rows (C, ..., O)
 line8 <-
-  paste0("*\t[", even_rows, "]23\tpos") # sgNCAPH2 in Column 24 even rows (B, D, ..., N)
+  paste0("*\t[", even_rows, "]23\tpos") # sgNCAPH2 in Column 23 even rows (B, D, ..., N)
 
 header <- c(line1, line2, line3, line4, line5, line6, line7, line8)
 
@@ -453,7 +479,8 @@ config_tbl <- annotation_tbl |>
 
 glimpse(config_tbl)
 
-write_tsv(config_tbl,
+write_tsv(
+  config_tbl,
   file = fs::path(METADATA_DIR, "Plateconf.txt"),
   append = T
 ) # append
@@ -489,14 +516,16 @@ well_tbl |>
   group_keys() |>
   mutate(Filename = paste0(plate_index, "_cellHTS2.txt")) |>
   group_by(measurement) |>
-  group_walk(~ write_tsv(
-    select(.x, Filename, Plate, Replicate, Batch),
-    fs::path(
-      IN_DIR,
-      .y$measurement,
-      "Platelist.txt"
+  group_walk(
+    ~ write_tsv(
+      select(.x, Filename, Plate, Replicate, Batch),
+      fs::path(
+        IN_DIR,
+        .y$measurement,
+        "Platelist.txt"
+      )
     )
-  ))
+  )
 
 dir_info(
   path = IN_DIR,
@@ -511,15 +540,18 @@ Reformat the well names according to cellHTS2 specifications and write out one `
 ```{r}
 #| label: make-measurements
 
-meas_tbl <- left_join(well_tbl,
+meas_tbl <- left_join(
+  well_tbl,
   barcodes_tbl,
   by = c("plate_index" = "PlateName")
 ) |>
-  mutate(well_index = sprintf(
-    "%s%02d",
-    str_extract(well_index, "\\w"),
-    as.numeric(str_extract(well_index, "\\d+"))
-  ))
+  mutate(
+    well_index = sprintf(
+      "%s%02d",
+      str_extract(well_index, "\\w"),
+      as.numeric(str_extract(well_index, "\\d+"))
+    )
+  )
 
 meas_tbl |>
   pivot_longer(
@@ -528,25 +560,28 @@ meas_tbl |>
     names_to = "measurement"
   ) |>
   group_by(measurement, plate_index) |>
-  group_walk(~ write_tsv(
-    select(.x, Plate, WellName = well_index, Value),
-    fs::path(
-      IN_DIR,
-      .y$measurement,
-      paste0(
-        .y$plate_index,
-        "_cellHTS2.txt"
-      )
-    ),
-    col_names = F,
-    na = "NaN"
-  ))
+  group_walk(
+    ~ write_tsv(
+      select(.x, Plate, WellName = well_index, Value),
+      fs::path(
+        IN_DIR,
+        .y$measurement,
+        paste0(
+          .y$plate_index,
+          "_cellHTS2.txt"
+        )
+      ),
+      col_names = F,
+      na = "NaN"
+    )
+  )
 
 dir_info(
   path = IN_DIR,
   glob = "*_cellHTS2.txt",
   recurse = T
-) |> select(1:2)
+) |>
+  select(1:2)
 ```
 
 Document the information about the analysis session

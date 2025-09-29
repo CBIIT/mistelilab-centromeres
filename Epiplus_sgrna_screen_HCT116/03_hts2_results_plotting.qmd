@@ -62,9 +62,7 @@ read_hts2_results <- function(path, glob) {
     recurse = T,
     glob = glob
   ) |>
-    map_df(read_tsv,
-      .id = "file_name"
-    )
+    map_df(read_tsv, .id = "file_name")
 }
 
 glob_path <- "*Results_table.txt"
@@ -73,7 +71,8 @@ hts2_output_path <- here("Epiplus_sgrna_screen_HCT116", "hts2_output")
 all_tbl <- read_hts2_results(hts2_output_path, glob_path) |>
   filter(!(is.na(score))) |>
   mutate(prop = str_match(file_name, "hts2_output/(.*?)/")[, 2]) |>
-  select(plate,
+  select(
+    plate,
     well,
     control = wellAnno,
     gene_symbol = GeneSymbol,
@@ -147,7 +146,10 @@ glimpse(all_tbl)
 Write the results to a csv file.
 
 ```{r}
-write_csv(all_tbl, here("Epiplus_sgrna_screen_HCT116", "knitr_output", "hct116_all_genes.csv"))
+write_csv(
+  all_tbl,
+  here("Epiplus_sgrna_screen_HCT116", "knitr_output", "hct116_all_genes.csv")
+)
 ```
 
 ```{r}

@@ -2,7 +2,7 @@
 *.Rhistory
 *.RData
 *.Ruserdata
-*.DS_Data
+*.DS_Store
 *.html
 .cursorrules
 *output/
